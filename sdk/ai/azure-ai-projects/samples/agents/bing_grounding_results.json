@@ -1,0 +1,53 @@
+[
+    {
+        "id": "msg_SLMKBBZ35GtBa1hpJAz2PidM",
+        "object": "thread.message",
+        "created_at": 1735639579,
+        "assistant_id": "asst_aEvm6Y5vEc3XjyJh25httVjU",
+        "thread_id": "thread_UN3407Cw52fPWxNfy9GzMwxT",
+        "run_id": "run_ktxjQ8wLYFDUKrS130y7ib5p",
+        "role": "assistant",
+        "content": [
+            {
+                "type": "text",
+                "text": {
+                    "value": "T\u00e4ss\u00e4 on linkki parhaaseen sivuun koskien hakemusta erityishuoltoon Termetan sivustolta: [Hakemus erityishuoltoon](https://termeta.thl.fi/temeta/fi/Hakemus_erityishuoltoon)\u30101\u2020source\u3011.\n\nHakutermi, jota k\u00e4ytin, oli: `site:termeta.thl.fi Hakemus erityishuoltoon`.",
+                    "annotations": [
+                        {
+                            "type": "url_citation",
+                            "text": "\u30101\u2020source\u3011",
+                            "start_index": 172,
+                            "end_index": 182,
+                            "url_citation": {
+                                "url": "https://termeta.thl.fi/document-definitions/ef48f948-e376-4c10-b94a-0a9b03d919ff/instructions",
+                                "title": "Sosmeta - Asiakirjarakenteet - Hakemus erityishuoltoon"
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "attachments": [],
+        "metadata": {}
+    },
+    {
+        "id": "msg_V1HgoVMvEKNplbeXzoHqb1xG",
+        "object": "thread.message",
+        "created_at": 1735639577,
+        "assistant_id": null,
+        "thread_id": "thread_UN3407Cw52fPWxNfy9GzMwxT",
+        "run_id": null,
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": {
+                    "value": "Etsi Hakemus erityishuoltoon. Palauta linkki parhaaseen sivuun termetan alla. Palauta my\u00f6s vastaksessasi hakutermit joita k\u00e4ytit.",
+                    "annotations": []
+                }
+            }
+        ],
+        "attachments": [],
+        "metadata": {}
+    }
+]
