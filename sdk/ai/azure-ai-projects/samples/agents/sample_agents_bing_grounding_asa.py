@@ -2,16 +2,16 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 # ------------------------------------
-"""  
-DESCRIPTION:  
-    This sample demonstrates how to use agent operations with the Bing grounding tool from  
-    the Azure Agents service using a synchronous client.  
-USAGE:  
-    python sample_agents_bing_grounding.py  
-    Before running the sample:  
-    pip install azure-ai-projects azure-identity requests beautifulsoup4  
-    Set this environment variables with your own values:  
-    PROJECT_CONNECTION_STRING - the Azure AI Project connection string, as found in your AI Foundry project.  
+"""
+DESCRIPTION:
+    This sample demonstrates how to use agent operations with the Bing grounding tool from
+    the Azure Agents service using a synchronous client.
+USAGE:
+    python sample_agents_bing_grounding.py
+    Before running the sample:
+    pip install azure-ai-projects azure-identity requests beautifulsoup4
+    Set this environment variables with your own values:
+    PROJECT_CONNECTION_STRING - the Azure AI Project connection string, as found in your AI Foundry project.
 """
 
 import os
@@ -24,9 +24,15 @@ from azure.identity import DefaultAzureCredential
 from azure.ai.projects.models import BingGroundingTool, MessageTextContent
 
 
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+sample = requests.get(
+    'https://termeta.thl.fi/document-definitions/e439adb4-7d42-4103-a921-a4decff71c9a', headers=headers)
+
+
 def write_to_file(data, filename="bing_grounding_results.json"):
-    """  
-    Writes data to a JSON file with UTF-8 encoding.  
+    """
+    Writes data to a JSON file with UTF-8 encoding.
     """
     try:
         with open(filename, 'w', encoding='utf-8') as file:
@@ -36,11 +42,13 @@ def write_to_file(data, filename="bing_grounding_results.json"):
 
 
 def fetch_web_page_content(url):
-    """  
-    Fetches the content of a web page.  
     """
+    Fetches the content of a web page.
+    """
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
         return response.text
     except Exception as e:
@@ -49,8 +57,8 @@ def fetch_web_page_content(url):
 
 
 def parse_web_page_content(html_content):
-    """  
-    Parses the HTML content of a web page.  
+    """
+    Parses the HTML content of a web page.
     """
     try:
         soup = BeautifulSoup(html_content, 'html.parser')
@@ -82,7 +90,7 @@ try:
         agent = project_client.agents.create_agent(
             model=os.environ["AAA_MODEL_DEPLOYMENT_NAME"],
             name="my-assistant",
-            instructions="Autat sosiaalihuollon asiakirjojen etsimisessä internetistä osoitteesta termeta.thl.fi\n Haet esimerkiksi Asia-asiakirjaa haulla 'site:termeta.thl.fi asia-asiakirja'. Korvaa hakutermi lopussa käyttäjän antamien tietojen perusteella.",
+            instructions="Autat sosiaalihuollon asiakirjojen etsimisessä internetistä osoitteen termeta.thl.fi/document-definitions alta\n Haet esimerkiksi Asia-asiakirjaa haulla 'site:termeta.thl.fi/document-definitions Asia-asiakirja'. Korvaa hakutermi lopussa käyttäjän antamien tietojen perusteella.",
             tools=bing.definitions,
             headers={"x-ms-enable-preview": "true"},
         )
@@ -96,7 +104,7 @@ try:
         message = project_client.agents.create_message(
             thread_id=thread.id,
             role="user",
-            content="Etsi Hakemus erityishuoltoon. Palauta linkki parhaaseen sivuun termetan alla. Palauta myös vastaksessasi hakutermit joita käytit."
+            content="Etsi 'Hakemus erityishuoltoon'. Palauta täsmällisesti ensimmäinen linkki hakutuloksista. Palauta vastaksessasi myös hakutermit joita käytit haussa."
         )
         print(f"Created message, ID: {message.id}")
 
@@ -116,57 +124,64 @@ try:
         # Write messages to a local file
         write_to_file([message.as_dict() for message in messages.data])
 
-        # Extract the URL from the assistant's response
-        assistant_response = messages.data[-1].content
-        # Assuming the URL is the last word in the response
-        url = assistant_response.split(" ")[-1]
+        # Extract the URL from the assistant's response using url_citation
+        assistant_response = messages.data[0].content[0].text['annotations']
+        url = None
+        for annotation in assistant_response:
+            if annotation['type'] == 'url_citation':
+                url = annotation['url_citation']['url']
+                break
+        print(f"Extracted URL: {url}")
 
         # Fetch and parse the web page content
-        html_content = fetch_web_page_content(url)
-        if html_content:
-            web_page_text = parse_web_page_content(html_content)
-            if web_page_text:
-                # Create a new agent for processing the web page content
-                agent = project_client.agents.create_agent(
-                    model="gpt-4o",
-                    name="my-assistant",
-                    instructions="Olet avulias assistentti. Täytä lomake ohjeiden mukaan.",
-                )
-                print(f"Created agent for LLM, agent ID: {agent.id}")
+        if url:
+            html_content = fetch_web_page_content(url)
+            if html_content:
+                web_page_text = parse_web_page_content(html_content)
+                if web_page_text:
+                    # Create a new agent for processing the web page content
+                    content_agent = project_client.agents.create_agent(
+                        model=os.environ["AAA_MODEL_DEPLOYMENT_NAME"],
+                        name="sosmeta-assistant",
+                        instructions="Olet avulias assistentti. Täytä lomake ohjeiden mukaan.",
+                    )
+                    print(f"Created agent for LLM, content_agent ID: {content_agent.id}")
 
-                # Create a new thread for the LLM
-                thread = project_client.agents.create_thread()
-                print(f"Created thread for LLM, thread ID: {thread.id}")
+                    # Create a new thread for the LLM
+                    thread = project_client.agents.create_thread()
+                    print(f"Created thread for LLM, thread ID: {thread.id}")
 
-                # Send the web page content and instructions to the LLM
-                message = project_client.agents.create_message(
-                    thread_id=thread.id,
-                    role="user",
-                    content=web_page_text + "\n\nTäytä lomake ohjeiden mukaan."
-                )
-                print(f"Created message for LLM, message ID: {message.id}")
+                    # Send the web page content and instructions to the LLM
+                    message = project_client.agents.create_message(
+                        thread_id=thread.id,
+                        role="user",
+                        content=web_page_text + "\n\nTäytä lomake ohjeiden mukaan."
+                    )
+                    print(f"Created message for LLM, message ID: {message.id}")
 
-                # Create and poll a run for the LLM
-                run = project_client.agents.create_run(
-                    thread_id=thread.id, assistant_id=agent.id)
-                while run.status in ["queued", "in_progress", "requires_action"]:
-                    time.sleep(1)
-                    run = project_client.agents.get_run(
-                        thread_id=thread.id, run_id=run.id)
-                    print(f"Run status: {run.status}")
+                    # Create and poll a run for the LLM
+                    run = project_client.agents.create_run(
+                        thread_id=thread.id, assistant_id=content_agent.id
+                    )
+                    while run.status in ["queued", "in_progress", "requires_action"]:
+                        time.sleep(1)
+                        run = project_client.agents.get_run(
+                            thread_id=thread.id, run_id=run.id
+                        )
+                        print(f"Run status: {run.status}")
 
-                # Fetch and log all messages from the LLM
-                messages = project_client.agents.list_messages(
-                    thread_id=thread.id)
-                for data_point in reversed(messages.data):
-                    last_message_content = data_point.content[-1]
-                    if isinstance(last_message_content, MessageTextContent):
-                        print(
-                            f"{data_point.role}: {last_message_content.text.value}")
+                    # Fetch and log all messages from the LLM
+                    messages = project_client.agents.list_messages(
+                        thread_id=thread.id)
+                    for data_point in reversed(messages.data):
+                        last_message_content = data_point.content[-1]
+                        if isinstance(last_message_content, MessageTextContent):
+                            print(
+                                f"{data_point.role}: {last_message_content.text.value}")
 
-                # Delete the LLM agent when done
-                project_client.agents.delete_agent(agent.id)
-                print("Deleted LLM agent")
+                    # Delete the LLM agent when done
+                    project_client.agents.delete_agent(content_agent.id)
+                    print("Deleted content agent")
 
         # Delete the initial assistant when done
         project_client.agents.delete_agent(agent.id)
