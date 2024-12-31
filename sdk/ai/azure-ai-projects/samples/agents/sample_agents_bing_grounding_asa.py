@@ -73,8 +73,8 @@ def main():
                 name="my-assistant",
                 instructions=(
                     "Autat sosiaalihuollon asiakirjojen etsimisessä internetistä osoitteen "
-                    "termeta.thl.fi/document-definitions alta. Haet esimerkiksi Asia-asiakirjaa haulla "
-                    "site:termeta.thl.fi/document-definitions Asia-asiakirja. Korvaa hakutermi lopussa "
+                    "termeta.thl.fi alta. Haet esimerkiksi Asia-asiakirjaa haulla "
+                    "site:termeta.thl.fi Asia-asiakirja. Korvaa hakutermi lopussa "
                     "käyttäjän antamien tietojen perusteella."
                 ),
                 tools=bing.definitions,
@@ -91,8 +91,9 @@ def main():
                 thread_id=thread.id,
                 role="user",
                 content=(
-                    "Etsi 'Hakemus erityishuoltoon'. Palauta täsmällisesti ensimmäinen linkki hakutuloksista, joka on muotoa https://termeta.thl.fi/document-definitions/<ID>, jossa loppuosan ID vaihtuu, mutta perässä ei ole muuta"
-                    "Palauta vastauksessasi myös hakutermit joita käytit haussa."
+                    "Etsi Hakemus erityishuoltoon. Palauta täsmällisesti ensimmäinen linkki hakutuloksista, joka on muotoa https://termeta.thl.fi/document-definitions/ef48f948-e376-4c10-b94a-0a9b03d919ff/definition, jossa vain ID ef48f948-e376-4c10-b94a-0a9b03d919ff vaihtuu."
+                    "Palauta vain URL joka loppuu definition."
+                    "Palauta vastauksessasi myös hakutermit joita käytit haussa. Palauta myös kaikki haun palauttamat linkit sellaisenaan. "
                 ),
             )
             print(f"Created message, ID: {message.id}")
@@ -134,7 +135,7 @@ def main():
                         content_agent = project_client.agents.create_agent(
                             model=os.environ["AAA_MODEL_DEPLOYMENT_NAME"],
                             name="sosmeta-assistant",
-                            instructions="Olet avulias assistentti. Täytä lomake ohjeiden mukaan keksimälälsi esimerkkidatalla.",
+                            instructions="Olet avulias assistentti. Täytä lomake ohjeiden mukaan keksimälläsi esimerkkidatalla.",
                         )
                         print(f"Created content agent, ID: {content_agent.id}")
 
