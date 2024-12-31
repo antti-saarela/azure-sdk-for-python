@@ -73,9 +73,7 @@ def main():
                 name="my-assistant",
                 instructions=(
                     "Autat sosiaalihuollon asiakirjojen etsimisessä internetistä osoitteen "
-                    "termeta.thl.fi alta. Haet esimerkiksi Asia-asiakirjaa haulla "
-                    "site:termeta.thl.fi Asia-asiakirja. Korvaa hakutermi lopussa "
-                    "käyttäjän antamien tietojen perusteella."
+                    "termeta.thl.fi alta. Annat vain yhden lähdeviitteen per vastaus. Palauttamasi lähdeviitteen linkin tulee päättyä '/definition'"
                 ),
                 tools=bing.definitions,
                 headers={"x-ms-enable-preview": "true"},
@@ -91,9 +89,7 @@ def main():
                 thread_id=thread.id,
                 role="user",
                 content=(
-                    "Etsi Hakemus erityishuoltoon. Palauta täsmällisesti ensimmäinen linkki hakutuloksista, joka on muotoa https://termeta.thl.fi/document-definitions/ef48f948-e376-4c10-b94a-0a9b03d919ff/definition, jossa vain ID ef48f948-e376-4c10-b94a-0a9b03d919ff vaihtuu."
-                    "Palauta vain URL joka loppuu definition."
-                    "Palauta vastauksessasi myös hakutermit joita käytit haussa. Palauta myös kaikki haun palauttamat linkit sellaisenaan. "
+                    "Haluan ajantasaista tietoa hakemuksesta erityishuoltoon. Käytä lähteenä THL:n Sosmeta palvelua" #  ja tarkista että viitatun ohjeen tila on 'Valmis'. Anna tasan yksi lähdeviite. Lähdeviitteen linkin tulee päättyä tekstiin '/definition'"
                 ),
             )
             print(f"Created message, ID: {message.id}")
