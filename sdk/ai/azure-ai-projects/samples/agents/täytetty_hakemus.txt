@@ -1,0 +1,466 @@
+```html
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <title>Sosmeta - Asiakirjarakenteet - Hakemus erityishuoltoon</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="/bootstrap/3.4.1/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="/compiled-css/styles.css"/>
+  <script src="/jquery/3.4.1/jquery.min.js"></script>
+  <script src="/plugins/flatpickr/4.6.3/flatpickr.min.js"></script>
+  <script src="/plugins/flatpickr/4.6.3/l10n/fi.js"></script>
+  <script src="/plugins/flatpickr/4.6.3/l10n/sv.js"></script>
+  <link rel="stylesheet" href="/plugins/flatpickr/4.6.3/flatpickr.min.css">
+  <link rel="stylesheet" href="/plugins/flatpickr/4.6.3/themes/material_blue.css">
+
+</head>
+<body>
+  <div class="bg-dim"></div>
+  <a href="#main-content" class="skip-to-content">Siirry sisältöön</a>
+  <header class="thl-header">
+    <div class="container">
+      <div class="row">
+        <ul class="language-menu">
+            <li>
+              <div class="language-selected"></div>
+              <a href="?lang=fi">SUOMEKSI</a>
+            </li>
+            <li>
+              <div class=""></div>
+              <a href="?lang=sv">PÅ SVENSKA</a>
+            </li>
+        </ul>
+      </div>
+      <div class="row header-logo">
+        <div class="col-sm-12">
+          <img src="/img/kanta-logo.png" alt="Kanta-palvelun logo." class="kanta-logo">
+          <img src="/img/thl-logo-horizontal.png" alt="Terveyden ja hyvinvoinnin laitoksen logo, siirry THL:n sivuille." class="thl-logo">
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="container">
+
+<ol class="breadcrumb">
+  <li><a href="/">Etusivu</a></li>
+  <li><a href="/document-definitions/list">Asiakirjarakenteet</a></li>
+  <li class="active">Hakemus erityishuoltoon</li>
+</ol>
+
+<div class="context-header" id="main-content">
+  <div class="row">
+    <div class="col-sm-6">
+      <a href="javascript:history.back()" class="button-back">Takaisin</a>
+      <h1>
+        <div class="header-info">Asiakirjarakenne</div>
+        Hakemus erityishuoltoon
+      </h1>
+    </div>
+    <div class="col-sm-6 text-right">
+      <a class="btn btn-outline-primary btn-download"
+         href="/document-definitions/e439adb4-7d42-4103-a921-a4decff71c9a/schema?pretty=true&dl=true"
+         download id="download-schema" role="button">Lataa .schema</a>
+      <a class="btn btn-outline-primary btn-download"
+         href="/document-definitions/e439adb4-7d42-4103-a921-a4decff71c9a/spreadsheet"
+         download id="download-spreadsheet" role="button">Lataa Excel</a>
+    </div>
+  </div>
+</div>
+
+<div class="info-container">
+  <div class="context-list">
+    <div class="row">
+      <div class="col-sm-4"><label for="sel-version">Versio:</label></div>
+      <div class="col-sm-2">
+        <select class="form-control" id="sel-version">
+            <option value="e439adb4-7d42-4103-a921-a4decff71c9a" selected>
+              2024-11-01
+                (01.11.2024)
+            </option>
+            <option value="b74592a9-4d5a-44d1-95fb-92649d009960" >
+              2022-09-28
+                (28.09.2022)
+            </option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-4">OID:</div>
+      <div class="col-sm-8">1.2.246.537.6.1506.3003.2024.11.1</div>
+    </div>
+    <div class="row">
+      <div class="col-sm-4">Tila:</div>
+      <div class="col-sm-8">    <span class="label label-published">Valmis</span>
+</div>
+    </div>
+    <div class="row">
+      <div class="col-sm-4">Asiakirjatyyppi:</div>
+      <div class="col-sm-8">Hakemus</div>
+    </div>
+    <div class="row">
+      <div class="col-sm-4">Määritelmä:</div>
+      <div class="col-sm-8">
+        päätöksiä tekevälle vaativan moniammatillisen tuen asiantuntijaryhmälle osoitettu hakemus henkilön määräämisestä tahdosta riippumattomaan erityishuoltoon tai sijoittamisesta muuhun kuin tahdosta riippumattomaan erityishuoltoon <br/>Hakemuksen tahdosta riippumattomaan erityishuoltoon on oikeutettu tekemään ensisijaisesti henkilön laillinen edustaja, hänen omaisensa tai muu läheisensä. <br/>Jollei tahdosta riippumattoman erityishuollon hakemuksen tekemiseen oikeutettuja ole tai jolleivat he suostu hakemuksen tekemiseen, hakemuksen voi tehdä myös se hyvinvointialueen hallintosäännössä tehtävään määrätty viranhaltija, jonka alueella henkilö oleskelee. Vastaavin edellytyksin voi hakemuksen rangaistuslaitoksessa olevan osalta tehdä laitoksen johtaja.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="context-tab-nav">
+  <div class="row">
+    <div class="col-xs-12">
+      <nav class="nav">
+        <a class="nav-link active" href="/document-definitions/e439adb4-7d42-4103-a921-a4decff71c9a">Asiakirjarakennemäärittely</a>
+        <a class="nav-link " href="/document-definitions/e439adb4-7d42-4103-a921-a4decff71c9a/history">Toteutuneet muutokset</a>
+        <a class="nav-link " href="/document-definitions/e439adb4-7d42-4103-a921-a4decff71c9a/context-information">Kontekstitiedot</a>
+        <a class="nav-link " href="/document-definitions/e439adb4-7d42-4103-a921-a4decff71c9a/instructions">Ohjeet</a>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<div class="toggle-list-controls">
+  <a href="" class="structure-toggle">Laajenna kaikki</a>
+</div>
+<div class="row-number-wrapper">
+  <div class="toggle-list">
+
+    <div class="list-item level-0 ">
+      <div class="row-number">1</div>
+      <div class="header">
+        <button type="button" class="row-toggle" aria-label="Laajenna"></button>
+        <div class="row">
+          <div class="col-xs-5 col-sm-5">
+            <a href="" class="field-info-toggle">Vastaanottaja</a>
+          </div>
+          <div class="col-xs-7 col-sm-7">
+            <div class="row">
+              <div class="col-sm-4">
+                <div class="representation"><span class="representation-name-last-part">Organisaatio<span>(TK)</span></span></div>
+              </div>
+              <div class="col-sm-8 text-right">
+                <div class="field-labels"><span class="label label-required">Pakollinen</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="field-info">
+        <div class="context-list">
+          <div class="row">
+            <div class="col-sm-4">Tietokentän nimi:</div>
+            <div class="col-sm-8">Vastaanottaja</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Tiedon esitysmuoto:</div>
+            <div class="col-sm-8">Organisaatio<span class="data-component-field-postfix">(TK)</span></div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Tietokentän näyttäminen:</div>
+            <div class="col-sm-8">Normaali</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Toistuva:</div>
+            <div class="col-sm-8">Ei</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Pakollinen:</div>
+            <div class="col-sm-8">Kyllä</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Selite:</div>
+            <div class="col-sm-8">
+              Kehitysvammaisten erityishuollosta annetun lain 31 §:n 2 mom mukaan erityishuollon antamista koskeva hakemus tulee tehdä päätöksiä tekevälle vaativan moniammatillisen tuen asiantuntijaryhmälle. Asiantuntijaryhmä päättää erityishuollon antamisesta ja lopettamisesta. Em. lain 32 §:n 3 mom mukaan henkilön määräämisestä vaativan moniammatillisen tuen yksikköön tahdostaan riippumatta on tehtävä päätöksiä tekevälle vaativan moniammatillisen tuen asiantuntijaryhmälle kirjallinen hakemus.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="list-item level-1 last-item">
+          <div class="row-number">2</div>
+          <div class="header">
+            <button type="button" class="row-toggle" aria-label="Laajenna"></button>
+            <div class="row">
+              <div class="col-xs-5 col-sm-5">
+                <a href="" class="field-info-toggle">Organisaation nimi</a>
+              </div>
+              <div class="col-xs-7 col-sm-7">
+                <div class="row">
+                  <div class="col-sm-4">
+                    <div class="representation">Nimi</div>
+                  </div>
+                  <div class="col-sm-8 text-right">
+                    <div class="field-labels"><span class="label label-required">Pakollinen</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="field-info">
+            <div class="context-list">
+              <div class="row">
+                <div class="col-sm-4">Tietokentän nimi:</div>
+                <div class="col-sm-8">Organisaation nimi</div>
+              </div>
+              <div class="row">
+                <div class="col-sm-4">Tiedon esitysmuoto:</div>
+                <div class="col-sm-8">Nimi</div>
+              </div>
+              <div class="row">
+                <div class="col-sm-4">Tietokentän näyttäminen:</div>
+                <div class="col-sm-8">Normaali</div>
+              </div>
+              <div class="row">
+                <div class="col-sm-4">Toistuva:</div>
+                <div class="col-sm-8">Ei</div>
+              </div>
+              <div class="row">
+                <div class="col-sm-4">Pakollinen:</div>
+                <div class="col-sm-8">Kyllä</div>
+              </div>
+              <div class="row">
+                <div class="col-sm-4">Selite:</div>
+                <div class="col-sm-8">-</div>
+              </div>
+              <div class="row">
+                <div class="col-sm-4">Toteutusohje:</div>
+                <div class="col-sm-8">Kenttä on pakollinen TK Organisaation määrityksestä poiketen.</div>
+              </div>
+            </div>
+          </div>
+          <div class="content">
+            <div class="form-group">
+              <label for="organisaationNimi">Organisaation nimi:</label>
+              <input type="text" class="form-control" id="organisaationNimi" value="Erityishuollon Palvelut Oy">
+            </div>
+          </div>
+        </div>
+        <div class="list-item level-1 ">
+          <div class="row-number">3</div>
+          <div class="header">
+            <button type="button" class="row-toggle" aria-label="Laajenna"></button>
+            <div class="row">
+              <div class="col-xs-5 col-sm-5">
+                <a href="" class="field-info-toggle">Yhteystiedot</a>
+              </div>
+              <div class="col-xs-7 col-sm-7">
+                <div class="row">
+                  <div class="col-sm-4">
+                    <div class="representation"><span class="representation-name-last-part">Yhteystiedot<span>(TK)</span></span></div>
+                  </div>
+                  <div class="col-sm-8 text-right">
+                    <div class="field-labels"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="field-info">
+            <div class="context-list">
+              <div class="row">
+                <div class="col-sm-4">Tietokentän nimi:</div>
+                <div class="col-sm-8">Yhteystiedot</div>
+              </div>
+              <div class="row">
+                <div class="col-sm-4">Tiedon esitysmuoto:</div>
+                <div class="col-sm-8"><span class="data-component-field-postfix">Yhteystiedot(TK)</span></div>
+              </div>
+              <div class="row">
+                <div class="col-sm-4">Tietokentän näyttäminen:</div>
+                <div class="col-sm-8">Normaali</div>
+              </div>
+              <div class="row">
+                <div class="col-sm-4">Toistuva:</div>
+                <div class="col-sm-8">Ei</div>
+              </div>
+              <div class="row">
+                <div class="col-sm-4">Pakollinen:</div>
+                <div class="col-sm-8">Ei</div>
+              </div>
+              <div class="row">
+                <div class="col-sm-4">Selite:</div>
+                <div class="col-sm-8">-</div>
+              </div>
+            </div>
+          </div>
+          <div class="content">
+            <div class="form-group">
+              <label for="osoite">Osoite:</label>
+              <input type="text" class="form-control" id="osoite" value="Esimerkinkatu 12">
+            </div>
+            <div class="form-group">
+              <label for="postinumero">Postinumero:</label>
+              <input type="text" class="form-control" id="postinumero" value="00100">
+            </div>
+            <div class="form-group">
+              <label for="postitoimipaikka">Postitoimipaikka:</label>
+              <input type="text" class="form-control" id="postitoimipaikka" value="Helsinki">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="list-item level-0 last-item">
+      <div class="row-number">8</div>
+      <div class="header">
+        <button type="button" class="row-toggle" aria-label="Laajenna"></button>
+        <div class="row">
+          <div class="col-xs-5 col-sm-5">
+            <a href="" class="field-info-toggle">Hakemus koskee</a>
+          </div>
+          <div class="col-xs-7 col-sm-7">
+            <div class="row">
+              <div class="col-sm-4">
+                <div class="representation">Koodi</div>
+              </div>
+              <div class="col-sm-8 text-right">
+                <div class="field-labels"><span class="label label-required">Pakollinen</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="field-info">
+        <div class="context-list">
+          <div class="row">
+            <div class="col-sm-4">Tietokentän nimi:</div>
+            <div class="col-sm-8">Hakemus koskee</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Tiedon esitysmuoto:</div>
+            <div class="col-sm-8">Koodi</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Tietokentän näyttäminen:</div>
+            <div class="col-sm-8">Normaali</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Toistuva:</div>
+            <div class="col-sm-8">Ei</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Pakollinen:</div>
+            <div class="col-sm-8">Kyllä</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Selite:</div>
+            <div class="col-sm-8">
+              Tällä hakemuksella haetaan erityishuoltoa henkilön tahdosta riippumatta että hänen suostumuksellaan. Tähän kenttään kirjataan, kummasta tilanteesta on kyse.
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Toteutusohje:</div>
+            <div class="col-sm-8">
+              Kentässä käytetään sisäistä luokitusta eli luokitusta, jota ei ole kansallisella koodistopalvelimella. Kentässä sallitut arvot on esitetty Luokitus-kohdassa.
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Luokitus 1:</div>
+            <div class="col-sm-8">
+              Sisäinen luokitus: 1 = Erityishuoltoa, 2 = Tahdosta riippumatonta erityishuoltoa
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Luokituksen tunnus 1:</div>
+            <div class="col-sm-8">
+              Hakemus tahdosta riippumattomaan erityishuoltoon/Hakemus koskee
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="form-group">
+          <label for="hakemusKoskee">Hakemus koskee:</label>
+          <select class="form-control" id="hakemusKoskee">
+            <option value="1">Erityishuoltoa</option>
+            <option value="2" selected>Tahdosta riippumatonta erityishuoltoa</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="list-item level-0 ">
+      <div class="row-number">9</div>
+      <div class="header">
+        <button type="button" class="row-toggle" aria-label="Laajenna"></button>
+        <div class="row">
+          <div class="col-xs-5 col-sm-5">
+            <a href="" class="field-info-toggle">Henkilö, jota hakemus koskee</a>
+          </div>
+          <div class="col-xs-7 col-sm-7">
+            <div class="row">
+              <div class="col-sm-4">
+                <div class="representation"><span class="representation-name-last-part">Yksityishenkilö<span>(TK)</span></span></div>
+              </div>
+              <div class="col-sm-8 text-right">
+                <div class="field-labels"><span class="label label-required">Pakollinen</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="field-info">
+        <div class="context-list">
+          <div class="row">
+            <div class="col-sm-4">Tietokentän nimi:</div>
+            <div class="col-sm-8">Asiakas</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Tietokentän otsikko:</div>
+            <div class="col-sm-8">Henkilö, jota hakemus koskee</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Tiedon esitysmuoto:</div>
+            <div class="col-sm-8"><span class="data-component-field-postfix">Yksityishenkilö(TK)</span></div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Tietokentän näyttäminen:</div>
+            <div class="col-sm-8">Normaali</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Toistuva:</div>
+            <div class="col-sm-8">Ei</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Pakollinen:</div>
+            <div class="col-sm-8">Kyllä</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">Selite:</div>
+            <div class="col-sm-8">-</div>
+          </div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="form-group">
+          <label for="sukunimi">Sukunimi:</label>
+          <input type="text" class="form-control" id="sukunimi" value="Virtanen">
+        </div>
+        <div class="form-group">
+          <label for="etunimet">Etunimet:</label>
+          <input type="text" class="form-control" id="etunimet" value="Kaisa Mari">
+        </div>
+        <div class="form-group">
+          <label for="henkilötunnus">Henkilötunnus:</label>
+          <input type="text" class="form-control" id="henkilötunnus" value="010101-123N">
+        </div>
+        <div class="form-group">
+          <label for="turvakielto">Turvakielto:</label>
+          <input type="checkbox" id="turvakielto" value="false">
+        </div>
+        <div class="form-group">
+          <label for="yhteystiedot">Yhteystiedot:</label>
+          <textarea class="form-control" id="yhteystiedot" rows="3">Hämeenkatu 10, 33100 Tampere</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>
+```
