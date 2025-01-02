@@ -231,7 +231,7 @@ def main():
             print("Keskusteluketjun luominen valitsijalle epäonnistui. Lopetetaan.")
             return
 
-        topic = "erityishuollon hakemus"
+        topic = "ennakovia ilmoitus lastensuojelusta"
         # Lähetetään jäsentäjän vastaus valitsijalle
         message_content = {
             "prompt": f"Valitse ja palauta vain sunteellinen linkki, joka parhaiten vastaa lomakkeen {topic} täyttämisen ohjeita. Palauta vain linkki, älä muuta",
@@ -288,7 +288,7 @@ def main():
             project_client,
             model_name=os.environ["AAA_MODEL_DEPLOYMENT_NAME"],
             agent_name="hakemuksen-täyttäjä",
-            instructions="Käytä annettua HTML-sisältöä täyttöohjeena ja täytä uusi lomake keksityillä tiedoilla. Palauta vain täytetty lomake. Täytä kaikki kohdat, myös ne, jotka eivät ole ohjeessa pakollisia. Palauta täytetty lomake Markdown -muodossa."
+            instructions="Käytä annettua HTML-sisältöä täyttöohjeena ja täytä uusi lomake keksityillä tiedoilla. Palauta vain täytetty lomake. Täytä kaikki ohjeessa olevat kohdat, myös ne, jotka eivät ole ohjeessa merkitty pakollisiksi. Täytä kaikkien hierarkiatasojen tiedot. Keksi tarvittaesaa selitteet ja tekstit vapaatekstikenttiin. Palauta täytetty lomake Markdown -muodossa."
         )
         if not form_filler_agent:
             print("Hakemuksen täyttäjän luominen epäonnistui. Lopetetaan.")
@@ -302,7 +302,8 @@ def main():
 
         # Lähetetään valitun linkin sisältö täyttäjälle
         message = create_message(
-            project_client, thread.id, "user", selected_page_content
+            project_client, thread.id, "user", selected_page_content +
+            "\n\n Käytä ohjeen numerointia ja palauta kaikki numeroidut kohdat täytettyinä keksityillä esimerkeillä. Tee tekstikenttiin keskipitkiä kuvauksia."
         )
         if not message:
             print("Viestin lähettäminen täyttäjälle epäonnistui. Lopetetaan.")
@@ -323,6 +324,9 @@ def main():
         if not filled_form:
             print("Ei vastausta täyttäjältä. Lopetetaan.")
             return
+
+        filled_form = filled_form.replace("```markdown", "").replace("```", "")
+
         write_to_file(filled_form, "täytetty_hakemus.md")
 
         # Siivotaan agentit
