@@ -1,8 +1,10 @@
+import re
 import os
 import json
 import time
 import requests
 from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import MessageTextContent, MessageTextDetails, ThreadMessage
 from azure.identity import DefaultAzureCredential
 
 
@@ -98,148 +100,239 @@ def list_messages(project_client, thread_id):
 
 
 def extract_assistant_reply(messages):
-    """  
-    Extracts the assistant's reply from the messages.  
-    If 'text.value' exists, it is extracted. Otherwise, the entire response is returned.  
+    """
+    Extracts the assistant's reply from the messages.
+    Always returns the 'text.value' field if it exists.
     """
     try:
         for message in messages.data:
-            if message.role == "assistant":
-                # Check if the content is a list and contains the expected structure
+            if isinstance(message, ThreadMessage) and message.role == "assistant":
+                # Tarkistetaan, että content on sanakirja ja sisältää odotetun rakenteen
                 if isinstance(message.content, list):
-                    for item in message.content:
+                    if len(message.content) > 0 and isinstance(message.content[0], MessageTextContent):
+                        first_content = message.content[0]
                         if (
-                            isinstance(item, dict)
-                            and item.get("type") == "text"
-                            and "text" in item
-                            and "value" in item["text"]
+                            isinstance(first_content, MessageTextContent) and
+                            first_content["type"] == "text" and
+                            hasattr(first_content, "text") and
+                            isinstance(first_content["text"], MessageTextDetails) and
+                            hasattr(first_content["text"], "value")
                         ):
-                            # Extract 'text.value'
-                            return str(item["text"]["value"])
-                # If the expected structure is not found, return the entire response
-                return str(message.content)
-        print("No assistant reply found.")
+                            # Palautetaan 'text.value'
+                            return str(first_content["text"].value)
+        # Jos 'text.value' ei löydy, tulostetaan virheilmoitus
+        print("No 'text.value' found in assistant's reply.")
         return None
     except Exception as e:
         print(f"Error extracting assistant reply: {e}")
         return None
 
 
+def parse_relative_path_with_regex(message_content):
+    """
+    Parses the relative path from the agent's reply using regex.
+    Handles cases where the link is:
+    - A standalone relative path
+    - Part of a key-value pair (e.g., "link" or "linkki")
+    - With or without quotes
+    - Removes trailing single quotes if present
+    """
+    try:
+        # Etsitään linkki muodossa:
+        # 1. "link": "/document-definitions/..."
+        # 2. linkki: /document-definitions/...
+        # 3. "/document-definitions/..." (lainausmerkeissä)
+        # 4. /document-definitions/... (pelkkä polku)
+        match = re.search(
+            r'(?:link|linkki)?:?\s*["\']?(\/document-definitions\/[^\s"\'\\]+)', message_content)
+        if match:
+            # Palautetaan löydetty linkki ja poistetaan mahdollinen lopussa oleva yksittäinen lainausmerkki
+            result = match.group(1)
+            return result.rstrip("'")
+        else:
+            print("No relative path found in the message content.")
+            return None
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return None
+
+
 def main():
     try:
-        # Initialize the AIProjectClient
+        # Alustetaan AIProjectClient
         project_client = AIProjectClient.from_connection_string(
             credential=DefaultAzureCredential(),
             conn_str=os.environ["PROJECT_CONNECTION_STRING"],
         )
 
-        # Fetch web page content
-        url = "https://sosmeta.thl.fi/document-definitions/list/search"
+        # Haetaan verkkosivun sisältö
+        base_url = "https://sosmeta.thl.fi"
+        url = f"{base_url}/document-definitions/list/search"
         html_content = fetch_web_page_content(url)
         if not html_content:
-            print("Failed to fetch web page content. Exiting.")
+            print("Verkkosivun sisällön haku epäonnistui. Lopetetaan.")
             return
 
-        # Create a parsing agent
+        # Luodaan agentti HTML-sisällön jäsentämiseen
         parser_agent = create_agent(
             project_client,
             model_name=os.environ["AAA_MODEL_DEPLOYMENT_NAME"],
-            agent_name="content-parser",
-            instructions="Parse the provided HTML content and return links, titles, and descriptions in a well-structured format."
+            agent_name="sisällön-jäsentäjä",
+            instructions="Jäsennä annettu HTML-sisältö ja palauta sen sisältämät linkit, otsikot ja kuvaukset, joitka liittyvät dokumenttien täyttämiseen. Palauta vain linkit, tila, otsikot ja kuvaukset hyvin jäsennellyssä koneluettavassa muodossa, kuten YAMLina."
         )
         if not parser_agent:
-            print("Failed to create parsing agent. Exiting.")
+            print("Sisällön jäsentäjän luominen epäonnistui. Lopetetaan.")
             return
 
-        # Create a thread for the parsing agent
+        # Luodaan keskusteluketju jäsentäjälle
         thread = create_thread(project_client)
         if not thread:
-            print("Failed to create thread for parsing agent. Exiting.")
+            print("Keskusteluketjun luominen jäsentäjälle epäonnistui. Lopetetaan.")
             return
 
-        # Send the HTML content to the parsing agent
+        # Lähetetään HTML-sisältö jäsentäjälle
         message = create_message(
             project_client, thread.id, "user", html_content)
         if not message:
-            print("Failed to send message to parsing agent. Exiting.")
+            print("Viestin lähettäminen jäsentäjälle epäonnistui. Lopetetaan.")
             return
 
-        # Process the parsing agent run
+        # Prosessoidaan jäsentäjän suoritus
         run = process_run(project_client, thread.id, parser_agent.id)
         if not run:
-            print("Failed to process parsing agent run. Exiting.")
+            print("Jäsentäjän suorituksen prosessointi epäonnistui. Lopetetaan.")
             return
 
-        # Fetch and save the assistant's reply
+        # Haetaan ja tallennetaan jäsentäjän vastaus
         messages = list_messages(project_client, thread.id)
         if not messages:
-            print("Failed to fetch messages from parsing agent. Exiting.")
+            print("Viestien haku jäsentäjältä epäonnistui. Lopetetaan.")
             return
-
         assistant_reply = extract_assistant_reply(messages)
         if not assistant_reply:
-            print("No reply from parsing agent. Exiting.")
+            print("Ei vastausta jäsentäjältä. Lopetetaan.")
             return
+        write_to_file(assistant_reply, "jäsentäjän_vastaus.txt")
 
-        # Write the assistant's reply to a file
-        write_to_file(assistant_reply, "parsing_agent_reply.txt")
-
-        # Use the assistant's reply as input for the next agent
+        # Käytetään jäsentäjän vastausta seuraavalle agentille
         selector_agent = create_agent(
             project_client,
             model_name=os.environ["AAA_MODEL_DEPLOYMENT_NAME"],
-            agent_name="link-selector",
+            agent_name="linkin-valitsija",
             instructions="Valitse oikea linkki annettujen ohjeiden perusteella."
         )
         if not selector_agent:
-            print("Failed to create link selector agent. Exiting.")
+            print("Linkin valitsijan luominen epäonnistui. Lopetetaan.")
             return
 
-        # Create a thread for the selector agent
+        # Luodaan keskusteluketju valitsijalle
         thread = create_thread(project_client)
         if not thread:
-            print("Failed to create thread for link selector agent. Exiting.")
+            print("Keskusteluketjun luominen valitsijalle epäonnistui. Lopetetaan.")
             return
 
-        # Send the assistant's reply to the selector agent
+        topic = "erityishuollon hakemus"
+        # Lähetetään jäsentäjän vastaus valitsijalle
         message_content = {
-            "prompt": "Valitse ja palauta linkki, joka parhaiten vastaa erityishuollon hakemuksen täyttämisen ohjeita.",
+            "prompt": f"Valitse ja palauta vain sunteellinen linkki, joka parhaiten vastaa lomakkeen {topic} täyttämisen ohjeita. Palauta vain linkki, älä muuta",
             "links": assistant_reply
         }
         message = create_message(
             project_client, thread.id, "user", json.dumps(message_content)
         )
         if not message:
-            print("Failed to send message to link selector agent. Exiting.")
+            print("Viestin lähettäminen valitsijalle epäonnistui. Lopetetaan.")
             return
 
-        # Process the selector agent run
+        # Prosessoidaan valitsijan suoritus
         run = process_run(project_client, thread.id, selector_agent.id)
         if not run:
-            print("Failed to process link selector agent run. Exiting.")
+            print("Valitsijan suorituksen prosessointi epäonnistui. Lopetetaan.")
             return
 
-        # Fetch and save the selector agent's reply
+        # Haetaan ja tallennetaan valitsijan vastaus
         messages = list_messages(project_client, thread.id)
         if not messages:
-            print("Failed to fetch messages from link selector agent. Exiting.")
+            print("Viestien haku valitsijalta epäonnistui. Lopetetaan.")
+            return
+        selected_link = extract_assistant_reply(messages)
+        if not selected_link:
+            print("Ei vastausta valitsijalta. Lopetetaan.")
+            return
+        write_to_file(selected_link, "suhteellinen_polku.txt")
+
+        relative_path = parse_relative_path_with_regex(selected_link)
+        if not relative_path:
+            print("Ei suhteellista polkua ohjeeseen. Lopetetaan.")
             return
 
-        assistant_reply = extract_assistant_reply(messages)
-        if not assistant_reply:
-            print("No reply from link selector agent. Exiting.")
+        print(f"relative_path {relative_path}")
+
+        # Muutetaan suhteellinen linkki absoluuttiseksi
+        if not relative_path.startswith("http"):
+            selected_link = f"{base_url}{relative_path}"
+        else:
+            selected_link = relative_path
+        write_to_file(selected_link, "yhdistetty_linkki.txt")
+
+        # Haetaan valitun linkin takana oleva sivu
+        selected_page_content = fetch_web_page_content(selected_link)
+        if not selected_page_content:
+            print("Valitun linkin sisällön haku epäonnistui. Lopetetaan.")
             return
 
-        # Write the assistant's reply to a file
-        write_to_file(assistant_reply, "link_selector_agent_reply.txt")
+        write_to_file(selected_page_content, "ohjeen_sisalto.html")
 
-        # Cleanup agents
+        # Luodaan agentti hakemuksen täyttämiseen
+        form_filler_agent = create_agent(
+            project_client,
+            model_name=os.environ["AAA_MODEL_DEPLOYMENT_NAME"],
+            agent_name="hakemuksen-täyttäjä",
+            instructions="Käytä annettua HTML-sisältöä täyttöohjeena ja täytä uusi lomake keksityillä tiedoilla. Palauta vain täytetty lomake. Täytä kaikki kohdat, myös ne, jotka eivät ole ohjeessa pakollisia. Palauta täytetty lomake Markdown -muodossa."
+        )
+        if not form_filler_agent:
+            print("Hakemuksen täyttäjän luominen epäonnistui. Lopetetaan.")
+            return
+
+        # Luodaan keskusteluketju täyttäjälle
+        thread = create_thread(project_client)
+        if not thread:
+            print("Keskusteluketjun luominen täyttäjälle epäonnistui. Lopetetaan.")
+            return
+
+        # Lähetetään valitun linkin sisältö täyttäjälle
+        message = create_message(
+            project_client, thread.id, "user", selected_page_content
+        )
+        if not message:
+            print("Viestin lähettäminen täyttäjälle epäonnistui. Lopetetaan.")
+            return
+
+        # Prosessoidaan täyttäjän suoritus
+        run = process_run(project_client, thread.id, form_filler_agent.id)
+        if not run:
+            print("Täyttäjän suorituksen prosessointi epäonnistui. Lopetetaan.")
+            return
+
+        # Haetaan ja tallennetaan täyttäjän vastaus
+        messages = list_messages(project_client, thread.id)
+        if not messages:
+            print("Viestien haku täyttäjältä epäonnistui. Lopetetaan.")
+            return
+        filled_form = extract_assistant_reply(messages)
+        if not filled_form:
+            print("Ei vastausta täyttäjältä. Lopetetaan.")
+            return
+        write_to_file(filled_form, "täytetty_hakemus.md")
+
+        # Siivotaan agentit
         project_client.agents.delete_agent(parser_agent.id)
         project_client.agents.delete_agent(selector_agent.id)
-        print("Agents deleted successfully.")
+        project_client.agents.delete_agent(form_filler_agent.id)
+        print("Agentit poistettu onnistuneesti.")
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"Tapahtui virhe: {e}")
 
 
 if __name__ == "__main__":
