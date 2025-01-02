@@ -1,0 +1,127 @@
+```yaml
+documents:
+  - link: "/document-definitions/a5da9ce9-e446-496e-8bfa-4d17a24a79fd"
+    status: "Valmis"
+    title: "Adoptioneuvonnan lausunto"
+    description: "adoptioneuvontaa antavan sosiaalityöntekijän lausunto näkemyksestään yksittäisessä adoption vahvistamiseen liittyvässä asiassa. Tämä lausunto voidaan antaa esimerkiksi tuomioistuimelle, adoptiolautakunnalle tai toiselle kunnalle."
+
+  - link: "/document-definitions/53ea73ab-2f29-4230-ba74-07e0b429eab3"
+    status: "Valmis"
+    title: "Adoptioneuvonnan suunnitelma"
+    description: "suunnitelma, johon kirjataan asiakkaalle annettavan adoptioneuvonnan keskeiset teemat ja keinot sekä adoptioneuvonnan arvioitu toteutumisaika"
+
+  - link: "/document-definitions/bc491189-14ef-4240-a12e-b0e100c89322"
+    status: "Valmis"
+    title: "Adoptionhakijoiden taustaselvitys"
+    description: "adoptionhakijan tai adoptionhakijoina olevan avioparin tekemä selvitys itsestään adoptioneuvonnan antajalle adoptioneuvonnan suunnittelua varten. Tässä selvityksessä adoptionhakijat antavat muun muassa elämäntilanteeseensa liittyviä tietoja sekä kertovat adoptiota koskevia toivomuksiaan."
+
+  - link: "/document-definitions/c32c3755-c4a7-451c-bd5e-3038810f9f8c"
+    status: "Valmis"
+    title: "Adoptoitavan lapsen taustatiedot"
+    description: "adoptioneuvonnan antajan lapsen syntymävanhemmista ja lähisukulaisista kokoama yhteenveto, josta lapsi saa myöhemmin tietoa alkuperästään ja adoptioon johtaneista syistä"
+
+  - link: "/document-definitions/14d31cba-8327-425f-99f1-714dec038399"
+    status: "Valmis"
+    title: "Aktivointisuunnitelma"
+    description: "suunnitelma, johon palvelunjärjestäjä, työ- ja elinkeinotoimiston asiantuntija ja pitkään jatkuneen työttömyyden perusteella työmarkkinatukea tai toimeentulotukea saava henkilö kirjaavat yhdessä hänen elämänhallintansa ja työllistymisedellytystensä parantamista tukevat tavoitteet ja keinot sekä kunkin osapuolen tehtävät. Säädöksissä on määritetty erilaiset aktivointisuunnitelman laatimiskriteerit alle 25-vuotiaille ja 25 vuotta täyttäneille. Jos asiakkaalle on tehty monialainen työllistymissuunnitelma, aktivointisuunnitelmaa ei tarvita. Aktivointisuunnitelmassa sovitaan esimerkiksi kuntouttavasta työtoiminnasta tai muiden palvelujen järjestämisestä asiakkaalle."
+
+  - link: "/document-definitions/d3d1e22c-f5f2-4cdb-ab5b-c9fcdda38523"
+    status: "Valmis"
+    title: "Asia-asiakirja"
+    description: "sosiaalihuollon asiakasasiakirja, jossa palvelunjärjestäjä ylläpitää keskeisiä tietoja yhden sosiaalihuollon asian hallintaa varten. Asia-asiakirjaan liitetään muut kyseiseen asiaan kuuluvat sosiaalihuollon asiakasasiakirjat. Asia-asiakirja ja sen sisältämä asia liittyvät yhteen tai useampaan sosiaalihuollon asiakkaaseen."
+
+  - link: "/document-definitions/b215d06e-f86f-445b-bbd6-449a89b0214f"
+    status: "Valmis"
+    title: "Asiakkaan yksilöllinen varautumissuunnitelma"
+    description: "palvelunantajan yhdessä sosiaalihuollon asiakkaan kanssa tekemä suunnitelma niistä keinoista, joilla tuetaan ja turvataan asiakkaan selviytymistä vakavissa yhteiskunnallisissa häiriötilanteissa ja poikkeusoloissa"
+
+  - link: "/document-definitions/9c37fa14-b79d-485a-832a-d8510b496783"
+    status: "Valmis"
+    title: "Asiakkuusasiakirja"
+    description: "sosiaalihuollon asiakasasiakirja, jossa palvelunjärjestäjä ylläpitää sosiaalihuollon asiakkaan perustietoja sekä sosiaalihuollon asiakkuuden hallinnassa tarvittavia tietoja. Asiakkuusasiakirja sisältää tiedot myös sosiaalihuollon asiakkaan sosiaalipalveluista vastaavasta työntekijästä ja muista asiakkuuden kannalta tärkeistä, asiakkaaseen liittyvistä henkilöistä. Asiakkuusasiakirjan sisältämiä asiakkaan perustietoja voidaan hyödyntää yhdessä muiden asiakkaan sosiaalihuollon asiakasasiakirjojen kanssa. Palvelunjärjestäjän vastuulla on ylläpitää asiakkuusasiakirjaa jokaisesta asiakkaastaan."
+
+  - link: "/document-definitions/5564bac7-e6c1-46fc-8ab4-ca13363c2f8e"
+    status: "Valmis"
+    title: "Avioliiton aikana syntyneen tai raskausaikana tunnustetun lapsen vanhempien neuvotteluasiakirja vanhemmuuden selvittämiseksi"
+    description: "selvitys, jolla synnyttänyt äiti ja aviomies, jonka isyys on todettu avioliiton perusteella, tai synnyttänyt äiti ja raskaudenaikaisen tunnustamisen perusteella vahvistettu vanhempi antavat lastenvalvojan kanssa käytävässä neuvottelussa vanhemmuuden selvittämisen kannalta tarpeelliset tiedot. Tämä asiakirja voidaan täyttää kummallekin osapuolelle erikseen tai yhteisesti. Tämä asiakirja on oikeusministeriön vanhemmuus- ja elatusasioissa käytettävistä lomakkeista antaman asetuksen (169/2024) mukaan laadittava lomakkeelle, joka noudattaa Terveyden ja hyvinvoinnin laitoksen vahvistamaa kaavaa."
+
+  - link: "/document-definitions/df677b13-bd89-48eb-9586-22675a815bee"
+    status: "Valmis"
+    title: "Ennakollinen lastensuojeluilmoitus"
+    description: "ilmoitusvelvollisen henkilön tekemä ilmoitus palvelunjärjestäjälle siitä, että on perusteltu syy epäillä syntyvän lapsen tarvitsevan lastensuojelun tukitoimia välittömästi syntymänsä jälkeen ja että ilmoituksen kohteena olevilla henkilöillä on mahdollisesti sosiaalihuollon tuen tarve. Lastensuojelulaissa (417/2007) säädetään henkilöistä, jotka ovat velvollisia tekemään tämän ilmoituksen."
+
+  - link: "/document-definitions/3d60d756-06ae-4929-96cc-4e4d16ef8b82"
+    status: "Valmis"
+    title: "Ennakollisen lastensuojeluilmoituksen arvio"
+    description: "palvelunjärjestäjän alustava arvio siitä, millaisia jatkotoimenpiteitä ennakollisen lastensuojeluilmoituksen kohteena olevat henkilöt mahdollisesti tarvitsevat ja onko henkilöillä kiireellisen avun tarve sekä tarvittaessa yhteistyössä lastensuojelun sosiaalityöntekijän kanssa siitä, mitä sosiaalipalveluja tarvitaan välittömästi lapsen syntymän jälkeen"
+
+  - link: "/document-definitions/e439adb4-7d42-4103-a921-a4decff71c9a"
+    status: "Valmis"
+    title: "Hakemus erityishuoltoon"
+    description: "päätöksiä tekevälle vaativan moniammatillisen tuen asiantuntijaryhmälle osoitettu hakemus henkilön määräämisestä tahdosta riippumattomaan erityishuoltoon tai sijoittamisesta muuhun kuin tahdosta riippumattomaan erityishuoltoon. Hakemuksen tahdosta riippumattomaan erityishuoltoon on oikeutettu tekemään ensisijaisesti henkilön laillinen edustaja, hänen omaisensa tai muu läheisensä. Jollei tahdosta riippumattoman erityishuollon hakemuksen tekemiseen oikeutettuja ole tai jolleivat he suostu hakemuksen tekemiseen, hakemuksen voi tehdä myös se hyvinvointialueen hallintosäännössä tehtävään määrätty viranhaltija, jonka alueella henkilö oleskelee. Vastaavin edellytyksin voi hakemuksen rangaistuslaitoksessa olevan osalta tehdä laitoksen johtaja."
+
+  - link: "/document-definitions/8cf967e2-92da-4bc6-979a-36cf3850ba7c"
+    status: "Valmis"
+    title: "Hakemus hallinto-oikeudelle lapsen tutkimiseksi"
+    description: "toimivaltaisen viranhaltijan hallinto-oikeudelle esittämä hakemus, jolla vaaditaan lupaa teettää lapselle lastensuojelun tarpeen selvittämiseksi sellainen välttämätön lääkärin tai muun asiantuntijan tutkimus, jonka tekemisen lapsen huoltaja kieltää. Tämän hakemuksen tekee lastensuojelulain (417/2007) 13.2 §:n ja 13.3 §:n mukainen viranhaltija."
+
+  - link: "/document-definitions/2a07197e-4adf-4f84-b397-b70249883a21"
+    status: "Valmis"
+    title: "Hakemus päihde- ja riippuvuustyön erityiseen palveluun"
+    description: "hakemus, jolla henkilö pyytää päihde- ja riippuvuustyön erityisiin palveluihin kuuluvaa sosiaalipalvelua"
+
+  - link: "/document-definitions/77b45088-c7b2-4e59-93c2-215153191da5"
+    status: "Valmis"
+    title: "Hoito- ja kasvatussuunnitelma"
+    description: "toteuttamissuunnitelma, johon kirjataan ne arkipäivän tavoitteet ja palvelun toteuttamisen yksityiskohdat, joiden avulla lapsen tarpeisiin vastataan ja turvataan lapsen hyvä kohtelu sijoituksen aikana. Lastensuojelussa sijaishuoltopaikan tulee täydentää yhteistyössä lapsen asioista vastaavan sosiaalityöntekijän kanssa sijaishuollossa olevan lapsen asiakassuunnitelmaa tarvittaessa erillisellä hoito- ja kasvatussuunnitelmalla. Hoito- ja kasvatussuunnitelma voidaan laatia myös perheryhmäkotitoiminnassa."
+
+  - link: "/document-definitions/0e1f2b07-439d-42a3-ad34-db770298d141"
+    status: "Valmis"
+    title: "Huostaanottohakemus hallinto-oikeudelle"
+    description: "toimivaltaisen viranhaltijan hallinto-oikeudelle esittämä hakemus, jolla vaaditaan lapsen huostaanottoa ja sijaishuoltoon sijoittamista sekä esitetään vaatimuksen perustelut. Tämä hakemus tehdään siinä tapauksessa, että lapsen huoltaja tai 12 vuotta täyttänyt lapsi itse vastustaa huostaanottoa tai siihen liittyvää sijaishuoltoon sijoittamista. Tämän hakemuksen esittää lastensuojelulain (417/2007) 13.2 §:ssä määritetty johtava viranhaltija tai tämän määräämä muu kelpoisuuden omaava viranhaltija. Tähän hakemukseen liitetään muun muassa lastensuojelun asiakassuunnitelma ja muut lastensuojelulain (417/2007) 44 §:n mukaiset asiakirjat."
+
+  - link: "/document-definitions/9687e537-d994-40f0-8c20-00d22b470e6e"
+    status: "Valmis"
+    title: "Hyväksymisasiakirja vanhemmuusasiassa"
+    description: "suostumus, jolla synnyttänyt äiti, aviomies, jonka isyys on todettu avioliiton perusteella, raskaudenaikaisen tunnustamisen perusteella vahvistettu vanhempi tai 15 vuotta täyttänyt lapsi ilmaisee, hyväksyykö hän vanhemmuuden tunnustamisen, tai suostumus, jolla 15‒17-vuotias lapsi hyväksyy vanhemmuuden vahvistamisen oikeudenomistajien suostumuksella. Tämä asiakirja on oikeusministeriön vanhemmuus- ja elatusasioissa käytettävistä lomakkeista antaman asetuksen (169/2024) mukaan laadittava lomakkeelle, joka noudattaa Terveyden ja hyvinvoinnin laitoksen vahvistamaa kaavaa."
+
+  - link: "/document-definitions/3ee285af-649f-4170-9a8b-c67e9d6d38de"
+    status: "Valmis"
+    title: "Häirinnän ja vainon riskiarvio"
+    description: "palvelunantajan ja häirintää tai vainoa kokeneen henkilön yhdessä tekemä arvio, jossa selvitetään sitä, onko henkilöllä riski joutua uudestaan häirinnän tai vainon kohteeksi ja jossa palvelunantaja tekee päätelmän henkilön tuen tarpeesta. Tämä arvio voidaan tehdä aina, kun henkilö on kokenut häirintää tai vainoa tai kun henkilö on erittäin peloissaan."
+
+  - link: "/document-definitions/797f3a1f-c823-4dce-9dc0-f1e5db76480a"
+    status: "Valmis"
+    title: "Ilmoitus adoptionhakijoiden olosuhteiden muutoksesta"
+    description: "adoptioneuvonnan antajan ilmoitus adoptiolautakunnalle adoptionhakijoiden olosuhteissa tapahtuneesta olennaisesta muutoksesta, joka saattaa vaikuttaa hakijoille myönnettyyn adoptiolupaan. Tämä ilmoitus saattaa liittyä esimerkiksi kuolemantapaukseen adoptionhakijan perheessä, avioeroon tai rikostuomioon. Adoptionhakijoiden olosuhteiden muutos saattaa aiheuttaa adoptioluvan peruuttamisen tai adoptiolautakunnan antaman virheellisen adoptiolupapäätöksen poistamisen ja asian ratkaisemisen uudelleen."
+
+  - link: "/document-definitions/204cb39a-d071-41b1-be8c-932efc5a64b4"
+    status: "Valmis"
+    title: "Ilmoitus aluehallintovirastolle asiakkaan sitomisesta"
+    description: "kehitysvammaisten erityishuollon toimintayksikön tekemä ilmoitus aluehallintovirastolle siitä, että kehitysvammaisten erityishuollon asiakkaalle on tehty rajoitustoimenpide, jossa asiakas on sidottu. Tämä ilmoitus sisältää asiakkaan tunnistetiedot, tiedot toimenpiteestä ja sen syystä sekä toimenpiteestä päättäneen lääkärin nimen."
+
+  - link: "/document-definitions/0896d6e8-f9a1-49f2-aef2-427a4647b8ea"
+    status: "Valmis"
+    title: "Ilmoitus hyvinvointialueen alueelle sijoitetusta lapsesta"
+    description: "sijoittajahyvinvointialueen ilmoitus toisen hyvinvointialueen sosiaalihuollosta vastaavalle toimielimelle joko siitä, että se on sijoittanut lapsen lastensuojelun sijaishuoltoon toisen hyvinvointialueen alueelle tai siitä, että lapsen sijoitus hyvinvointialueen alueella on päättynyt. Sijoittajahyvinvointialue tekee tämän ilmoituksen siksi, että sijoitushyvinvointialue voi järjestää lapselle tämän tarvitsemat palvelut ja tukitoimet sekä valvoa osaltaan sijaishuoltopaikkaa."
+
+  - link: "/document-definitions/f663c897-b1ef-4607-8d1f-bc6d29aa4b16"
+    status: "Valmis"
+    title: "Ilmoitus kuntouttavasta työtoiminnasta"
+    description: "palvelunjärjestäjän ilmoitus työ- ja elinkeinotoimistolle siitä, että työttömän sosiaalihuollon asiakkaan kuntouttava työtoiminta on alkanut tai keskeytynyt. Kuntouttavan työtoiminnan keskeytyminen saattaa vaikuttaa tiettyihin työttömän sosiaalihuollon asiakkaan etuuksiin."
+
+  - link: "/document-definitions/7c1e5612-f16e-47c8-b01d-f62e00fece5c"
+    status: "Testissä"
+    title: "Ilmoitus lapsen elatusavun lakimääräisestä muutoksesta"
+    description: "palvelunjärjestäjän vanhemmalle antama ilmoitus siitä, että lapsen elatussopimuksessa määritettyyn tai oikeuden päättämään lapsen elatusavun määrään tehdään vuoden alusta elinkustannusindeksin tarkistusta vastaava muutos. Tämä ilmoitus annetaan kalenterivuosittain vanhemmalle, joka on pyytänyt sitä."
+
+  - link: "/document-definitions/569e3529-2511-4e54-8c21-a9087e5e22e6"
+    status: "Testissä"
+    title: "Ilmoitus lapsen huoltajan tarpeesta"
+    description: "palvelunjärjestäjälle tehty ilmoitus lapsesta, joka on jäänyt ilman huoltajaa ja jolle tulee siksi järjestää välitön huolto ja huoltaja. Tämän ilmoituksen saanut palvelunjärjestäjä etsii lapselle huoltajan osana lapsen huollon ja tapaamisoikeuden turvaamista. Ilmoitus saattaa johtaa myös lastensuojelun toimiin, kuten lapsen välittömästä hoidosta huolehtimiseen."
+
+  - link: "/document-definitions/2af1527d-033c-42dd-9c73-b276f77d00d1"
+    status: "Valmis"
+    title: "Ilmoitus sosiaalihuollon tarpeesta"
+    description: "ilman henkilön suostumusta palvelunjärjestäjälle tehty ilmoitus henkilön sosiaalihuollon tarpeesta..."
+```
