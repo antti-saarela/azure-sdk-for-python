@@ -168,6 +168,7 @@ def main():
         # Haetaan verkkosivun sisältö
         base_url = "https://sosmeta.thl.fi"
         url = f"{base_url}/document-definitions/list/search"
+        url_postfix = "/schema"
         html_content = fetch_web_page_content(url)
         if not html_content:
             print("Verkkosivun sisällön haku epäonnistui. Lopetetaan.")
@@ -270,7 +271,7 @@ def main():
 
         # Muutetaan suhteellinen linkki absoluuttiseksi
         if not relative_path.startswith("http"):
-            selected_link = f"{base_url}{relative_path}"
+            selected_link = f"{base_url}{relative_path}{url_postfix}"
         else:
             selected_link = relative_path
         write_to_file(selected_link, "yhdistetty_linkki.txt")
@@ -288,7 +289,9 @@ def main():
             project_client,
             model_name=os.environ["AAA_MODEL_DEPLOYMENT_NAME"],
             agent_name="hakemuksen-täyttäjä",
-            instructions="Käytä annettua HTML-sisältöä täyttöohjeena ja täytä uusi lomake keksityillä tiedoilla. Palauta vain täytetty lomake. Täytä kaikki ohjeessa olevat kohdat, myös ne, jotka eivät ole ohjeessa merkitty pakollisiksi. Täytä kaikkien hierarkiatasojen tiedot. Keksi tarvittaesaa selitteet ja tekstit vapaatekstikenttiin. Palauta täytetty lomake Markdown -muodossa."
+            instructions=("Käytä annettua HTML-sisältöä täyttöohjeena ja täytä uusi lomake keksityillä tiedoilla."
+                          "Palauta vain täytetty lomake. Täytä kaikki ohjeessa olevat kohdat, myös ne, jotka eivät ole ohjeessa merkitty pakollisiksi."
+                          "Täytä kaikkien hierarkiatasojen tiedot. Keksi tarvittaessa selitteet ja tekstit vapaatekstikenttiin. Palauta täytetty lomake JSON -muodossa.")
         )
         if not form_filler_agent:
             print("Hakemuksen täyttäjän luominen epäonnistui. Lopetetaan.")
@@ -303,7 +306,7 @@ def main():
         # Lähetetään valitun linkin sisältö täyttäjälle
         message = create_message(
             project_client, thread.id, "user", selected_page_content +
-            "\n\n Käytä ohjeen numerointia ja palauta kaikki numeroidut kohdat täytettyinä keksityillä esimerkeillä. Tee tekstikenttiin keskipitkiä kuvauksia."
+            "\n\n Käytä ohjeen rakennetta ja palauta kaikki kohdat täytettyinä keksityillä esimerkeillä. Tee tekstikenttiin keskipitkiä kuvauksia."
         )
         if not message:
             print("Viestin lähettäminen täyttäjälle epäonnistui. Lopetetaan.")
@@ -325,9 +328,10 @@ def main():
             print("Ei vastausta täyttäjältä. Lopetetaan.")
             return
 
-        filled_form = filled_form.replace("```markdown", "").replace("```", "")
+        # filled_form = filled_form.replace("```markdown", "").replace("```", "")
+        # write_to_file(filled_form, "täytetty_hakemus.md")
 
-        write_to_file(filled_form, "täytetty_hakemus.md")
+        write_to_file(filled_form, "täytetty_hakemus.json")
 
         # Siivotaan agentit
         project_client.agents.delete_agent(parser_agent.id)
