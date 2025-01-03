@@ -191,7 +191,9 @@ def process_topic(project_client, base_url, url_postfix, topic, model_name):
         if not assistant_reply:
             print("No response from parser. Skipping topic.")
             return
-        write_to_file(assistant_reply, f"{topic}_parser_response.txt")
+        assistant_reply = assistant_reply.replace(
+            "```yaml", "").replace("```", "")
+        write_to_file(assistant_reply, f"{topic}_parser_response.yaml")
 
         # Create selector agent
         selector_agent = create_agent(
