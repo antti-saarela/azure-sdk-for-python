@@ -15,20 +15,23 @@ logging.basicConfig(level=logging.WARNING,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def write_to_file(data, filename, date=None):
+def write_to_file(data, filename, output_dir="output", sub_dir=None, date=None):
     """Writes data to a file, converting it to a string first."""
     try:
-        output_dir = "output"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        filepath = os.path.join(output_dir, filename)
+        if sub_dir:
+            dir_path = os.path.join(output_dir, sub_dir)
+        else:
+            dir_path = output_dir
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        filepath = os.path.join(dir_path, filename)
         with open(filepath, 'w', encoding='utf-8') as file:
             if date:
                 file.write(f"timestamp_created: {date}\n")
             file.write(str(data))
         logging.info(f"Data successfully written to {filepath}")
     except Exception as e:
-        logging.error(f"Error writing to file {filename}: {e}")
+        logging.error(f"Error writing to file {filepath}: {e}")
 
 
 def fetch_web_page_content(url):
@@ -150,7 +153,7 @@ def parse_relative_path_with_regex(message_content):
         return None
 
 
-def process_topic(project_client, base_url, url_postfix, topic, topic_links_yaml, selector_agent, form_filler_agent, form_filler_thread):
+def process_topic(project_client, base_url, url_postfix, output_base_dir, topic, topic_links_yaml, selector_agent, form_filler_agent, form_filler_thread):
     """Processes a topic by creating agents, threads, and handling messages."""
     try:
         # Create new thread for the selector agent
@@ -193,7 +196,8 @@ def process_topic(project_client, base_url, url_postfix, topic, topic_links_yaml
             logging.error("No response from selector. Skipping topic.")
             project_client.agents.delete_thread(selector_thread.id)
             return
-        write_to_file(selected_link, f"{topic}_selected_link.txt")
+        write_to_file(
+            selected_link, f"{topic}_selected_link.txt", output_dir=output_base_dir)
         relative_path = parse_relative_path_with_regex(selected_link)
         if not relative_path:
             logging.error("No relative path to instructions. Skipping topic.")
@@ -210,7 +214,8 @@ def process_topic(project_client, base_url, url_postfix, topic, topic_links_yaml
             selected_link = f"{base_url}{relative_path}{url_postfix}"
         else:
             selected_link = relative_path
-        write_to_file(selected_link, f"{topic}_combined_link.txt")
+        write_to_file(
+            selected_link, f"{topic}_combined_link.txt", output_dir=output_base_dir)
 
         # Fetch selected link content
         selected_page_content = fetch_web_page_content(selected_link)
@@ -219,7 +224,7 @@ def process_topic(project_client, base_url, url_postfix, topic, topic_links_yaml
                 "Failed to fetch content of selected link. Skipping topic.")
             return
         write_to_file(selected_page_content,
-                      f"{topic}_instructions_content.json")
+                      f"{topic}_instructions_content.json", output_dir=output_base_dir)
 
         # Send selected link content to form filler with updated instructions
         user_input = selected_page_content + \
@@ -250,7 +255,8 @@ def process_topic(project_client, base_url, url_postfix, topic, topic_links_yaml
             logging.error("No response from form filler. Skipping topic.")
             return
         filled_form = filled_form.replace("```json", "").replace("```", "")
-        write_to_file(filled_form, f"{topic}_filled_form.json")
+        write_to_file(filled_form, f"{topic}_filled_form.json",
+                      output_dir=output_base_dir, sub_dir="filled_forms")
 
         return filled_form
     except Exception as e:
@@ -337,6 +343,10 @@ def main():
             "Häirinnän ja vainon riskiarvio",
             "Ilmoitus sosiaalihuollon tarpeesta",
         ]
+
+        # Prepare output directory with timestamp
+        timestamp_str = datetime.now().strftime('%Y-%m-%d_%H-%M')
+        output_base_dir = os.path.join("output", timestamp_str)
 
         # Check if parser_response.yaml exists and is older than a week
         filepath = os.path.join("output", "parser_response.yaml")
@@ -428,6 +438,9 @@ def main():
                         "Palauta vain täytetty lomake. Täytä kaikki ohjeissa mainitut osiot, myös ne, joita ei ole merkitty pakollisiksi."
                         "Täytä kaikki hierarkkiset tasot. Keksi selityksiä ja tekstejä vapaatekstikenttiin tarvittaessa."
                         "Varmista, että käytetyt tiedot ovat johdonmukaisia tämän keskustelun aiempien lomakkeiden kanssa, säilyttäen nimet, yhteystiedot ja muut tiedot lomakkeiden välillä aiheen sisällä."
+                        "Jos ja kun keksit uusia nimiä, vältä kaikkein yleisimpiä sukunimiä ja etunimiä. Ole huolellinen käyttäessäsi nimiä keskusteluhistoriasta."
+                        "Ole tarkka syntymäaikojen ja sosiaaliturvatunnuksien luomsen kanssa, jotta ne olisivat yhdenmukaisia."
+                        "Käytä huolellista ja hyvää suomenkieltä."
                         "Palauta täytetty lomake JSON-muodossa."
                     )
                 )
@@ -459,7 +472,7 @@ def main():
                 continue
 
             process_topic(
-                project_client, base_url, url_postfix, topic, topic_links_yaml, selector_agent, form_filler_agent, form_filler_thread)
+                project_client, base_url, url_postfix, output_base_dir, topic, topic_links_yaml, selector_agent, form_filler_agent, form_filler_thread)
 
         # Clean up agents and threads after processing all topics
         if selector_agent:
