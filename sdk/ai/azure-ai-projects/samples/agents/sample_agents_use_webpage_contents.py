@@ -1,15 +1,21 @@
 # flake8: noqa: E501
-
 import os
 import json
 import re
 import requests
+import yaml
+from datetime import datetime, timedelta
 from azure.ai.projects import AIProjectClient
 from azure.ai.projects.models import MessageTextContent, MessageTextDetails, ThreadMessage
 from azure.identity import DefaultAzureCredential
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def write_to_file(data, filename):
+def write_to_file(data, filename, date=None):
     """Writes data to a file, converting it to a string first."""
     try:
         output_dir = "output"
@@ -17,10 +23,12 @@ def write_to_file(data, filename):
             os.makedirs(output_dir)
         filepath = os.path.join(output_dir, filename)
         with open(filepath, 'w', encoding='utf-8') as file:
+            if date:
+                file.write(f"timestamp_created: {date}\n")
             file.write(str(data))
-        print(f"Data successfully written to {filepath}")
+        logging.info(f"Data successfully written to {filepath}")
     except Exception as e:
-        print(f"Error writing to file {filename}: {e}")
+        logging.error(f"Error writing to file {filename}: {e}")
 
 
 def fetch_web_page_content(url):
@@ -33,7 +41,7 @@ def fetch_web_page_content(url):
         response.raise_for_status()
         return response.text
     except requests.RequestException as e:
-        print(f"Error fetching web page content: {e}")
+        logging.error(f"Error fetching web page content: {e}")
         return None
 
 
@@ -45,10 +53,10 @@ def create_agent(project_client, model_name, agent_name, instructions):
             name=agent_name,
             instructions=instructions,
         )
-        print(f"Agent created: {agent.id}")
+        logging.info(f"Agent created: {agent.id}")
         return agent
     except Exception as e:
-        print(f"Error creating agent: {e}")
+        logging.error(f"Error creating agent: {e}")
         return None
 
 
@@ -56,10 +64,10 @@ def create_thread(project_client):
     """Creates a new thread for communication."""
     try:
         thread = project_client.agents.create_thread()
-        print(f"Thread created: {thread.id}")
+        logging.info(f"Thread created: {thread.id}")
         return thread
     except Exception as e:
-        print(f"Error creating thread: {e}")
+        logging.error(f"Error creating thread: {e}")
         return None
 
 
@@ -71,10 +79,10 @@ def create_message(project_client, thread_id, role, content):
             role=role,
             content=content,
         )
-        print(f"Message created: {message.id}")
+        logging.info(f"Message created: {message.id}")
         return message
     except Exception as e:
-        print(f"Error creating message: {e}")
+        logging.error(f"Error creating message: {e}")
         return None
 
 
@@ -84,13 +92,13 @@ def process_run(project_client, thread_id, assistant_id):
         run = project_client.agents.create_and_process_run(
             thread_id=thread_id, assistant_id=assistant_id
         )
-        print(f"Run status: {run.status}")
+        logging.info(f"Run status: {run.status}")
         if run.status == "failed":
-            print(f"Run failed: {run.last_error}")
+            logging.error(f"Run failed: {run.last_error}")
             return None
         return run
     except Exception as e:
-        print(f"Error processing run: {e}")
+        logging.error(f"Error processing run: {e}")
         return None
 
 
@@ -100,7 +108,7 @@ def list_messages(project_client, thread_id):
         messages = project_client.agents.list_messages(thread_id=thread_id)
         return messages
     except Exception as e:
-        print(f"Error listing messages: {e}")
+        logging.error(f"Error listing messages: {e}")
         return None
 
 
@@ -120,10 +128,10 @@ def extract_assistant_reply(messages):
                             hasattr(first_content.text, "value")
                         ):
                             return str(first_content.text.value)
-        print("No 'text.value' found in assistant's reply.")
+        logging.info("No 'text.value' found in assistant's reply.")
         return None
     except Exception as e:
-        print(f"Error extracting assistant reply: {e}")
+        logging.error(f"Error extracting assistant reply: {e}")
         return None
 
 
@@ -136,128 +144,87 @@ def parse_relative_path_with_regex(message_content):
             result = match.group(1)
             return result.rstrip("'")
         else:
-            print("No relative path found in the message content.")
+            logging.info("No relative path found in the message content.")
             return None
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logging.error(f"Unexpected error: {e}")
         return None
 
 
-def process_topic(project_client, base_url, url_postfix, topic, model_name):
+def process_topic(project_client, base_url, url_postfix, topic, model_name, assistant_reply_yaml, previous_filled_form):
     try:
-        # Fetch web page content
-        url = f"{base_url}/document-definitions/list/search"
-        html_content = fetch_web_page_content(url)
-        if not html_content:
-            print("Failed to fetch web page content. Skipping topic.")
-            return
-
-        # Create parser agent
-        parser_agent = create_agent(
-            project_client,
-            model_name=model_name,
-            agent_name="content-parser",
-            instructions="Parse the given HTML content and return the links, titles, and descriptions related to document filling. Return only the links, status, titles, and descriptions in a well-structured machine-readable format, such as YAML."
-        )
-        if not parser_agent:
-            print("Failed to create content parser agent. Skipping topic.")
-            return
-
-        # Create thread for parser
-        thread = create_thread(project_client)
-        if not thread:
-            print("Failed to create thread for parser. Skipping topic.")
-            return
-
-        # Send HTML content to parser
-        message = create_message(
-            project_client, thread.id, "user", html_content)
-        if not message:
-            print("Failed to send message to parser. Skipping topic.")
-            return
-
-        # Process parser run
-        run = process_run(project_client, thread.id, parser_agent.id)
-        if not run:
-            print("Failed to process parser run. Skipping topic.")
-            return
-
-        # Fetch and save parser response
-        messages = list_messages(project_client, thread.id)
-        if not messages:
-            print("Failed to fetch messages from parser. Skipping topic.")
-            return
-        assistant_reply = extract_assistant_reply(messages)
-        if not assistant_reply:
-            print("No response from parser. Skipping topic.")
-            return
-        assistant_reply = assistant_reply.replace(
-            "```yaml", "").replace("```", "")
-        write_to_file(assistant_reply, f"{topic}_parser_response.yaml")
-
         # Create selector agent
         selector_agent = create_agent(
             project_client,
             model_name=model_name,
             agent_name="link-selector",
-            instructions="Select the correct link based on the given instructions."
+            instructions="Valitse oikea linkki annettujen ohjeiden perusteella."
         )
         if not selector_agent:
-            print("Failed to create link selector agent. Skipping topic.")
+            logging.error(
+                "Failed to create link selector agent. Skipping topic.")
             return
 
         # Create thread for selector
         thread = create_thread(project_client)
         if not thread:
-            print("Failed to create thread for selector. Skipping topic.")
+            logging.error(
+                "Failed to create thread for selector. Skipping topic.")
             return
 
         # Send parser response to selector
         message_content = {
-            "prompt": f"Select and return only the relative link that best matches the instructions for filling out the form {topic}. Return only the link, nothing else.",
-            "links": assistant_reply
+            "prompt": f"Valitse ja palauta vain suhteellinen linkki, joka parhaiten vastaa ohjeita lomakkeen täyttämiseksi {topic}. Palauta vain linkki, ei mitään muuta.",
+            "links": assistant_reply_yaml
         }
         message = create_message(
             project_client, thread.id, "user", json.dumps(message_content))
         if not message:
-            print("Failed to send message to selector. Skipping topic.")
+            logging.error(
+                "Failed to send message to selector. Skipping topic.")
             return
 
         # Process selector run
         run = process_run(project_client, thread.id, selector_agent.id)
         if not run:
-            print("Failed to process selector run. Skipping topic.")
+            logging.error("Failed to process selector run. Skipping topic.")
             return
 
         # Fetch and save selector response
         messages = list_messages(project_client, thread.id)
         if not messages:
-            print("Failed to fetch messages from selector. Skipping topic.")
+            logging.error(
+                "Failed to fetch messages from selector. Skipping topic.")
             return
+
         selected_link = extract_assistant_reply(messages)
         if not selected_link:
-            print("No response from selector. Skipping topic.")
+            logging.error("No response from selector. Skipping topic.")
             return
-        write_to_file(selected_link, f"{topic}_selected_link.txt")
 
+        write_to_file(selected_link, f"{topic}_selected_link.txt")
         relative_path = parse_relative_path_with_regex(selected_link)
         if not relative_path:
-            print("No relative path to instructions. Skipping topic.")
+            logging.error("No relative path to instructions. Skipping topic.")
             return
-        print(f"relative_path {relative_path}")
+
+        logging.info(f"relative_path {relative_path}")
 
         # Convert relative link to absolute
         if not relative_path.startswith("http"):
             selected_link = f"{base_url}{relative_path}{url_postfix}"
         else:
             selected_link = relative_path
+
         write_to_file(selected_link, f"{topic}_combined_link.txt")
 
         # Fetch selected link content
         selected_page_content = fetch_web_page_content(selected_link)
         if not selected_page_content:
-            print("Failed to fetch content of selected link. Skipping topic.")
+            logging.error(
+                "Failed to fetch content of selected link. Skipping topic.")
             return
+
         write_to_file(selected_page_content,
                       f"{topic}_instructions_content.json")
 
@@ -266,54 +233,101 @@ def process_topic(project_client, base_url, url_postfix, topic, model_name):
             project_client,
             model_name=model_name,
             agent_name="form-filler",
-            instructions=("Use the given HTML content as filling instructions and fill out a new form with invented data."
-                          "Return only the filled form. Fill in all the sections mentioned in the instructions, even those not marked as mandatory."
-                          "Fill in all hierarchical levels. Invent explanations and texts for free text fields if necessary. Return the filled form in JSON format.")
+            instructions=("Käytä annettua HTML-sisältöä täyttöohjeina ja täytä uusi lomake keksityillä tiedoilla."
+                          "Palauta vain täytetty lomake. Täytä kaikki ohjeissa mainitut osiot, myös ne, joita ei ole merkitty pakollisiksi."
+                          "Täytä kaikki hierarkkiset tasot. Keksi selityksiä ja tekstejä vapaatekstikenttiin tarvittaessa. Palauta täytetty lomake JSON-muodossa."
+                          f"Käytä aiemmin täytettyä lomaketta taustatietona erityisesti nimien ja yhteystietojen osalta, jos sellainen annetaan sinulle.")
         )
         if not form_filler_agent:
-            print("Failed to create form filler agent. Skipping topic.")
+            logging.error(
+                "Failed to create form filler agent. Skipping topic.")
             return
 
         # Create thread for form filler
         thread = create_thread(project_client)
         if not thread:
-            print("Failed to create thread for form filler. Skipping topic.")
+            logging.error(
+                "Failed to create thread for form filler. Skipping topic.")
             return
 
         # Send selected link content to form filler
+        user_input = selected_page_content + \
+            "\n\n Käytä ohjeiden rakennetta ja palauta kaikki osiot täytettyinä keksityillä esimerkeillä. Tee melko pitkiä kuvauksia eloisalla mutta realistisella sisällöllä tekstikentissä."
+        if len(previous_filled_form) > 5:
+            user_input = user_input + \
+                "\nKäytä mahdollisuuksien mukaan tietoja alla olevista ennakkotiedoista:\n\n {previous_filled_form}"
         message = create_message(
-            project_client, thread.id, "user", selected_page_content +
-            "\n\n Use the structure of the instructions and return all sections filled with invented examples. Make quite lengthy descriptions with vivid but realistic content in text fields."
+            project_client, thread.id, "user", user_input
         )
         if not message:
-            print("Failed to send message to form filler. Skipping topic.")
+            logging.error(
+                "Failed to send message to form filler. Skipping topic.")
             return
 
         # Process form filler run
         run = process_run(project_client, thread.id, form_filler_agent.id)
         if not run:
-            print("Failed to process form filler run. Skipping topic.")
+            logging.error("Failed to process form filler run. Skipping topic.")
             return
 
         # Fetch and save form filler response
         messages = list_messages(project_client, thread.id)
         if not messages:
-            print("Failed to fetch messages from form filler. Skipping topic.")
+            logging.error(
+                "Failed to fetch messages from form filler. Skipping topic.")
             return
+
         filled_form = extract_assistant_reply(messages)
         if not filled_form:
-            print("No response from form filler. Skipping topic.")
+            logging.error("No response from form filler. Skipping topic.")
             return
+
         filled_form = filled_form.replace("```json", "").replace("```", "")
         write_to_file(filled_form, f"{topic}_filled_form.json")
 
         # Clean up agents
-        project_client.agents.delete_agent(parser_agent.id)
         project_client.agents.delete_agent(selector_agent.id)
         project_client.agents.delete_agent(form_filler_agent.id)
-        print("Agents successfully deleted.")
+        logging.info("Agents successfully deleted.")
+        return filled_form
     except Exception as e:
-        print(f"Error processing topic '{topic}': {e}")
+        logging.error(f"Error processing topic '{topic}': {e}")
+        return None
+
+
+def get_file_creation_time_from_yaml(filepath):
+    """Gets the creation date from the YAML file."""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as file:
+            content = yaml.safe_load(file)
+            if 'timestamp_created' in content:
+                return datetime.strptime(content['timestamp_created'], '%Y-%m-%d').date()
+            return None
+    except Exception as e:
+        logging.error(f"Error getting file creation time from YAML: {e}")
+        return None
+
+
+def is_file_older_than_a_week(filepath):
+    """Checks if the file is older than a week."""
+    try:
+        file_creation_date = get_file_creation_time_from_yaml(filepath)
+        if file_creation_date:
+            return datetime.now().date() - file_creation_date > timedelta(weeks=1)
+        return False
+    except Exception as e:
+        logging.error(f"Error checking file age: {e}")
+        return False
+
+
+def read_yaml_file(filepath):
+    """Reads a YAML file and returns its content."""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as file:
+            return yaml.safe_load(file)
+    except Exception as e:
+        logging.error(f"Error reading YAML file {filepath}: {e}")
+        return None
 
 
 def main():
@@ -323,17 +337,118 @@ def main():
             credential=DefaultAzureCredential(),
             conn_str=os.environ["PROJECT_CONNECTION_STRING"],
         )
-
         base_url = "https://sosmeta.thl.fi"
         url_postfix = "/schema"
         model_name = os.environ["AAA_MODEL_DEPLOYMENT_NAME"]
-        topics = ["ennakovia ilmoitus lastensuojelusta",
-                  "Adoptioneuvonnan lausunto", "ilmotus kuntouttava työtoiminta"]
+        topics = [
+            "# Adoption process",
+            "Adoptionhakijoiden taustaselvitys",
+            "Adoptioneuvonnan suunnitelma",
+            "Adoptoitavan lapsen taustatiedot",
+            "Adoptioneuvonnan lausunto",
+            "Ilmoitus adoptionhakijoiden olosuhteiden muutoksesta",
+            "# Child protection and welfare",
+            "Ennakollinen lastensuojeluilmoitus",
+            "Ennakollisen lastensuojeluilmoituksen arvio",
+            "Huostaanottohakemus hallinto-oikeudelle",
+            "Hoito- ja kasvatussuunnitelma",
+            "Ilmoitus hyvinvointialueen alueelle sijoitetusta lapsesta",
+            "# Employment and social services",
+            "Aktivointisuunnitelma",
+            "Ilmoitus kuntouttavasta työtoiminnasta",
+            "Asia-asiakirja",
+            "Asiakkuusasiakirja",
+            "Asiakkaan yksilöllinen varautumissuunnitelma",
+            "# Family and parental matters",
+            "Avioliiton aikana syntyneen tai raskausaikana tunnustetun lapsen vanhempien neuvotteluasiakirja vanhemmuuden selvittämiseksi",
+            "Hyväksymisasiakirja vanhemmuusasiassa",
+            "Ilmoitus lapsen elatusavun lakimääräisestä muutoksesta",
+            "Ilmoitus lapsen huoltajan tarpeesta",
+            "# Special care and health services",
+            "Hakemus erityishuoltoon",
+            "Hakemus hallinto-oikeudelle lapsen tutkimiseksi",
+            "Hakemus päihde- ja riippuvuustyön erityiseen palveluun",
+            "Ilmoitus aluehallintovirastolle asiakkaan sitomisesta",
+            "# Safety and risk assessment",
+            "Häirinnän ja vainon riskiarvio",
+            "Ilmoitus sosiaalihuollon tarpeesta",
+        ]
+
+        # Check if parser_response.yaml exists and is older than a week
+        filepath = os.path.join("output", "parser_response.yaml")
+        if os.path.exists(filepath) and not is_file_older_than_a_week(filepath):
+            logging.info("parser_response.yaml is fresh. Using existing file.")
+            assistant_reply_yaml = read_yaml_file(filepath)
+        else:
+            # Fetch web page content once
+            url = f"{base_url}/document-definitions/list/search"
+            html_content = fetch_web_page_content(url)
+            if not html_content:
+                logging.error("Failed to fetch web page content. Exiting.")
+                return
+
+            # Create parser agent
+            parser_agent = create_agent(
+                project_client,
+                model_name=model_name,
+                agent_name="content-parser",
+                instructions="Jäsennä annettu HTML-sisältö ja palauta linkit, otsikot ja kuvaukset, jotka liittyvät asiakirjojen täyttämiseen. Palauta vain linkit, tila, otsikot ja kuvaukset hyvin jäsennellyssä koneellisesti luettavassa muodossa, kuten YAML."
+            )
+            if not parser_agent:
+                logging.error(
+                    "Failed to create content parser agent. Exiting.")
+                return
+
+            # Create thread for parser
+            thread = create_thread(project_client)
+            if not thread:
+                logging.error("Failed to create thread for parser. Exiting.")
+                return
+
+            # Send HTML content to parser
+            message = create_message(
+                project_client, thread.id, "user", html_content)
+            if not message:
+                logging.error("Failed to send message to parser. Exiting.")
+                return
+
+            # Process parser run
+            run = process_run(project_client, thread.id, parser_agent.id)
+            if not run:
+                logging.error("Failed to process parser run. Exiting.")
+                return
+
+            # Fetch and save parser response
+            messages = list_messages(project_client, thread.id)
+            if not messages:
+                logging.error("Failed to fetch messages from parser. Exiting.")
+                return
+
+            assistant_reply_yaml = extract_assistant_reply(messages)
+            if not assistant_reply_yaml:
+                logging.error("No response from parser. Exiting.")
+                return
+
+            assistant_reply_yaml = assistant_reply_yaml.replace(
+                "```yaml", "").replace("```", "")
+            date = datetime.now().strftime('%Y-%m-%d')
+            write_to_file(assistant_reply_yaml,
+                          "parser_response.yaml", date)
+
+            # Clean up parser agent
+            project_client.agents.delete_agent(parser_agent.id)
+            logging.info("Parser agent successfully deleted.")
+
+        previous_filled_form = ""
         for topic in topics:
-            process_topic(project_client, base_url,
-                          url_postfix, topic, model_name)
+            if topic.startswith("#"):
+                # Reset previous_filled_form when a new topic group starts
+                previous_filled_form = ""
+                continue
+            previous_filled_form = process_topic(
+                project_client, base_url, url_postfix, topic, model_name, assistant_reply_yaml, previous_filled_form)
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logging.error(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
