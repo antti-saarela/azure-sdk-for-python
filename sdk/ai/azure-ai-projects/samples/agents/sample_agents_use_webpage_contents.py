@@ -1,3 +1,5 @@
+# flake8: noqa: E501
+
 import re
 import os
 import json
@@ -11,9 +13,13 @@ from azure.identity import DefaultAzureCredential
 def write_to_file(data, filename):
     """Writes data to a file, converting it to a string first."""
     try:
-        with open(filename, 'w', encoding='utf-8') as file:
+        output_dir = "output"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        filepath = os.path.join(output_dir, filename)
+        with open(filepath, 'w', encoding='utf-8') as file:
             file.write(str(data))
-        print(f"Data successfully written to {filename}")
+        print(f"Data successfully written to {filepath}")
     except Exception as e:
         print(f"Error writing to file {filename}: {e}")
 
@@ -100,14 +106,13 @@ def list_messages(project_client, thread_id):
 
 
 def extract_assistant_reply(messages):
-    """
-    Extracts the assistant's reply from the messages.
-    Always returns the 'text.value' field if it exists.
+    """  
+    Extracts the assistant's reply from the messages.  
+    Always returns the 'text.value' field if it exists.  
     """
     try:
         for message in messages.data:
             if isinstance(message, ThreadMessage) and message.role == "assistant":
-                # Tarkistetaan, että content on sanakirja ja sisältää odotetun rakenteen
                 if isinstance(message.content, list):
                     if len(message.content) > 0 and isinstance(message.content[0], MessageTextContent):
                         first_content = message.content[0]
@@ -118,9 +123,7 @@ def extract_assistant_reply(messages):
                             isinstance(first_content["text"], MessageTextDetails) and
                             hasattr(first_content["text"], "value")
                         ):
-                            # Palautetaan 'text.value'
                             return str(first_content["text"].value)
-        # Jos 'text.value' ei löydy, tulostetaan virheilmoitus
         print("No 'text.value' found in assistant's reply.")
         return None
     except Exception as e:
@@ -129,24 +132,18 @@ def extract_assistant_reply(messages):
 
 
 def parse_relative_path_with_regex(message_content):
-    """
-    Parses the relative path from the agent's reply using regex.
-    Handles cases where the link is:
-    - A standalone relative path
-    - Part of a key-value pair (e.g., "link" or "linkki")
-    - With or without quotes
-    - Removes trailing single quotes if present
+    """  
+    Parses the relative path from the agent's reply using regex.  
+    Handles cases where the link is:  
+    - A standalone relative path  
+    - Part of a key-value pair (e.g., "link" or "linkki")  
+    - With or without quotes  
+    - Removes trailing single quotes if present  
     """
     try:
-        # Etsitään linkki muodossa:
-        # 1. "link": "/document-definitions/..."
-        # 2. linkki: /document-definitions/...
-        # 3. "/document-definitions/..." (lainausmerkeissä)
-        # 4. /document-definitions/... (pelkkä polku)
         match = re.search(
-            r'(?:link|linkki)?:?\s*["\']?(\/document-definitions\/[^\s"\'\\]+)', message_content)
+            r'(?:link)?:?\s*["\']?(\/document-definitions\/[^\s"\'\\]+)', message_content)
         if match:
-            # Palautetaan löydetty linkki ja poistetaan mahdollinen lopussa oleva yksittäinen lainausmerkki
             result = match.group(1)
             return result.rstrip("'")
         else:
@@ -157,190 +154,197 @@ def parse_relative_path_with_regex(message_content):
         return None
 
 
+def process_topic(project_client, base_url, url_postfix, topic, model_name):
+    try:
+        # Fetch web page content
+        url = f"{base_url}/document-definitions/list/search"
+        html_content = fetch_web_page_content(url)
+        if not html_content:
+            print("Failed to fetch web page content. Skipping topic.")
+            return
+
+        # Create parser agent
+        parser_agent = create_agent(
+            project_client,
+            model_name=model_name,
+            agent_name="content-parser",
+            instructions="Parse the given HTML content and return the links, titles, and descriptions related to document filling. Return only the links, status, titles, and descriptions in a well-structured machine-readable format, such as YAML."
+        )
+        if not parser_agent:
+            print("Failed to create content parser agent. Skipping topic.")
+            return
+
+        # Create thread for parser
+        thread = create_thread(project_client)
+        if not thread:
+            print("Failed to create thread for parser. Skipping topic.")
+            return
+
+        # Send HTML content to parser
+        message = create_message(
+            project_client, thread.id, "user", html_content)
+        if not message:
+            print("Failed to send message to parser. Skipping topic.")
+            return
+
+        # Process parser run
+        run = process_run(project_client, thread.id, parser_agent.id)
+        if not run:
+            print("Failed to process parser run. Skipping topic.")
+            return
+
+        # Fetch and save parser response
+        messages = list_messages(project_client, thread.id)
+        if not messages:
+            print("Failed to fetch messages from parser. Skipping topic.")
+            return
+        assistant_reply = extract_assistant_reply(messages)
+        if not assistant_reply:
+            print("No response from parser. Skipping topic.")
+            return
+        write_to_file(assistant_reply, f"{topic}_parser_response.txt")
+
+        # Create selector agent
+        selector_agent = create_agent(
+            project_client,
+            model_name=model_name,
+            agent_name="link-selector",
+            instructions="Select the correct link based on the given instructions."
+        )
+        if not selector_agent:
+            print("Failed to create link selector agent. Skipping topic.")
+            return
+
+        # Create thread for selector
+        thread = create_thread(project_client)
+        if not thread:
+            print("Failed to create thread for selector. Skipping topic.")
+            return
+
+        # Send parser response to selector
+        message_content = {
+            "prompt": f"Select and return only the relative link that best matches the instructions for filling out the form {topic}. Return only the link, nothing else.",
+            "links": assistant_reply
+        }
+        message = create_message(
+            project_client, thread.id, "user", json.dumps(message_content))
+        if not message:
+            print("Failed to send message to selector. Skipping topic.")
+            return
+
+        # Process selector run
+        run = process_run(project_client, thread.id, selector_agent.id)
+        if not run:
+            print("Failed to process selector run. Skipping topic.")
+            return
+
+        # Fetch and save selector response
+        messages = list_messages(project_client, thread.id)
+        if not messages:
+            print("Failed to fetch messages from selector. Skipping topic.")
+            return
+        selected_link = extract_assistant_reply(messages)
+        if not selected_link:
+            print("No response from selector. Skipping topic.")
+            return
+        write_to_file(selected_link, f"{topic}_selected_link.txt")
+
+        relative_path = parse_relative_path_with_regex(selected_link)
+        if not relative_path:
+            print("No relative path to instructions. Skipping topic.")
+            return
+
+        print(f"relative_path {relative_path}")
+
+        # Convert relative link to absolute
+        if not relative_path.startswith("http"):
+            selected_link = f"{base_url}{relative_path}{url_postfix}"
+        else:
+            selected_link = relative_path
+        write_to_file(selected_link, f"{topic}_combined_link.txt")
+
+        # Fetch selected link content
+        selected_page_content = fetch_web_page_content(selected_link)
+        if not selected_page_content:
+            print("Failed to fetch content of selected link. Skipping topic.")
+            return
+        write_to_file(selected_page_content,
+                      f"{topic}_instructions_content.html")
+
+        # Create form filler agent
+        form_filler_agent = create_agent(
+            project_client,
+            model_name=model_name,
+            agent_name="form-filler",
+            instructions=("Use the given HTML content as filling instructions and fill out a new form with invented data."
+                          "Return only the filled form. Fill in all the sections mentioned in the instructions, even those not marked as mandatory."
+                          "Fill in all hierarchical levels. Invent explanations and texts for free text fields if necessary. Return the filled form in JSON format.")
+        )
+        if not form_filler_agent:
+            print("Failed to create form filler agent. Skipping topic.")
+            return
+
+        # Create thread for form filler
+        thread = create_thread(project_client)
+        if not thread:
+            print("Failed to create thread for form filler. Skipping topic.")
+            return
+
+        # Send selected link content to form filler
+        message = create_message(
+            project_client, thread.id, "user", selected_page_content +
+            "\n\n Use the structure of the instructions and return all sections filled with invented examples. Make medium-length descriptions in text fields."
+        )
+        if not message:
+            print("Failed to send message to form filler. Skipping topic.")
+            return
+
+        # Process form filler run
+        run = process_run(project_client, thread.id, form_filler_agent.id)
+        if not run:
+            print("Failed to process form filler run. Skipping topic.")
+            return
+
+        # Fetch and save form filler response
+        messages = list_messages(project_client, thread.id)
+        if not messages:
+            print("Failed to fetch messages from form filler. Skipping topic.")
+            return
+        filled_form = extract_assistant_reply(messages)
+        if not filled_form:
+            print("No response from form filler. Skipping topic.")
+            return
+        write_to_file(filled_form, f"{topic}_filled_form.json")
+
+        # Clean up agents
+        project_client.agents.delete_agent(parser_agent.id)
+        project_client.agents.delete_agent(selector_agent.id)
+        project_client.agents.delete_agent(form_filler_agent.id)
+        print("Agents successfully deleted.")
+    except Exception as e:
+        print(f"Error processing topic '{topic}': {e}")
+
+
 def main():
     try:
-        # Alustetaan AIProjectClient
+        # Initialize AIProjectClient
         project_client = AIProjectClient.from_connection_string(
             credential=DefaultAzureCredential(),
             conn_str=os.environ["PROJECT_CONNECTION_STRING"],
         )
 
-        # Haetaan verkkosivun sisältö
         base_url = "https://sosmeta.thl.fi"
-        url = f"{base_url}/document-definitions/list/search"
         url_postfix = "/schema"
-        html_content = fetch_web_page_content(url)
-        if not html_content:
-            print("Verkkosivun sisällön haku epäonnistui. Lopetetaan.")
-            return
+        model_name = os.environ["AAA_MODEL_DEPLOYMENT_NAME"]
+        topics = ["ennakovia ilmoitus lastensuojelusta",
+                  "Adoptioneuvonnan lausunto", "ilmotus kuntouttava työtoiminta"]
 
-        # Luodaan agentti HTML-sisällön jäsentämiseen
-        parser_agent = create_agent(
-            project_client,
-            model_name=os.environ["AAA_MODEL_DEPLOYMENT_NAME"],
-            agent_name="sisällön-jäsentäjä",
-            instructions="Jäsennä annettu HTML-sisältö ja palauta sen sisältämät linkit, otsikot ja kuvaukset, joitka liittyvät dokumenttien täyttämiseen. Palauta vain linkit, tila, otsikot ja kuvaukset hyvin jäsennellyssä koneluettavassa muodossa, kuten YAMLina."
-        )
-        if not parser_agent:
-            print("Sisällön jäsentäjän luominen epäonnistui. Lopetetaan.")
-            return
-
-        # Luodaan keskusteluketju jäsentäjälle
-        thread = create_thread(project_client)
-        if not thread:
-            print("Keskusteluketjun luominen jäsentäjälle epäonnistui. Lopetetaan.")
-            return
-
-        # Lähetetään HTML-sisältö jäsentäjälle
-        message = create_message(
-            project_client, thread.id, "user", html_content)
-        if not message:
-            print("Viestin lähettäminen jäsentäjälle epäonnistui. Lopetetaan.")
-            return
-
-        # Prosessoidaan jäsentäjän suoritus
-        run = process_run(project_client, thread.id, parser_agent.id)
-        if not run:
-            print("Jäsentäjän suorituksen prosessointi epäonnistui. Lopetetaan.")
-            return
-
-        # Haetaan ja tallennetaan jäsentäjän vastaus
-        messages = list_messages(project_client, thread.id)
-        if not messages:
-            print("Viestien haku jäsentäjältä epäonnistui. Lopetetaan.")
-            return
-        assistant_reply = extract_assistant_reply(messages)
-        if not assistant_reply:
-            print("Ei vastausta jäsentäjältä. Lopetetaan.")
-            return
-        write_to_file(assistant_reply, "jäsentäjän_vastaus.txt")
-
-        # Käytetään jäsentäjän vastausta seuraavalle agentille
-        selector_agent = create_agent(
-            project_client,
-            model_name=os.environ["AAA_MODEL_DEPLOYMENT_NAME"],
-            agent_name="linkin-valitsija",
-            instructions="Valitse oikea linkki annettujen ohjeiden perusteella."
-        )
-        if not selector_agent:
-            print("Linkin valitsijan luominen epäonnistui. Lopetetaan.")
-            return
-
-        # Luodaan keskusteluketju valitsijalle
-        thread = create_thread(project_client)
-        if not thread:
-            print("Keskusteluketjun luominen valitsijalle epäonnistui. Lopetetaan.")
-            return
-
-        topic = "ennakovia ilmoitus lastensuojelusta"
-        # Lähetetään jäsentäjän vastaus valitsijalle
-        message_content = {
-            "prompt": f"Valitse ja palauta vain sunteellinen linkki, joka parhaiten vastaa lomakkeen {topic} täyttämisen ohjeita. Palauta vain linkki, älä muuta",
-            "links": assistant_reply
-        }
-        message = create_message(
-            project_client, thread.id, "user", json.dumps(message_content)
-        )
-        if not message:
-            print("Viestin lähettäminen valitsijalle epäonnistui. Lopetetaan.")
-            return
-
-        # Prosessoidaan valitsijan suoritus
-        run = process_run(project_client, thread.id, selector_agent.id)
-        if not run:
-            print("Valitsijan suorituksen prosessointi epäonnistui. Lopetetaan.")
-            return
-
-        # Haetaan ja tallennetaan valitsijan vastaus
-        messages = list_messages(project_client, thread.id)
-        if not messages:
-            print("Viestien haku valitsijalta epäonnistui. Lopetetaan.")
-            return
-        selected_link = extract_assistant_reply(messages)
-        if not selected_link:
-            print("Ei vastausta valitsijalta. Lopetetaan.")
-            return
-        write_to_file(selected_link, "suhteellinen_polku.txt")
-
-        relative_path = parse_relative_path_with_regex(selected_link)
-        if not relative_path:
-            print("Ei suhteellista polkua ohjeeseen. Lopetetaan.")
-            return
-
-        print(f"relative_path {relative_path}")
-
-        # Muutetaan suhteellinen linkki absoluuttiseksi
-        if not relative_path.startswith("http"):
-            selected_link = f"{base_url}{relative_path}{url_postfix}"
-        else:
-            selected_link = relative_path
-        write_to_file(selected_link, "yhdistetty_linkki.txt")
-
-        # Haetaan valitun linkin takana oleva sivu
-        selected_page_content = fetch_web_page_content(selected_link)
-        if not selected_page_content:
-            print("Valitun linkin sisällön haku epäonnistui. Lopetetaan.")
-            return
-
-        write_to_file(selected_page_content, "ohjeen_sisalto.html")
-
-        # Luodaan agentti hakemuksen täyttämiseen
-        form_filler_agent = create_agent(
-            project_client,
-            model_name=os.environ["AAA_MODEL_DEPLOYMENT_NAME"],
-            agent_name="hakemuksen-täyttäjä",
-            instructions=("Käytä annettua HTML-sisältöä täyttöohjeena ja täytä uusi lomake keksityillä tiedoilla."
-                          "Palauta vain täytetty lomake. Täytä kaikki ohjeessa olevat kohdat, myös ne, jotka eivät ole ohjeessa merkitty pakollisiksi."
-                          "Täytä kaikkien hierarkiatasojen tiedot. Keksi tarvittaessa selitteet ja tekstit vapaatekstikenttiin. Palauta täytetty lomake JSON -muodossa.")
-        )
-        if not form_filler_agent:
-            print("Hakemuksen täyttäjän luominen epäonnistui. Lopetetaan.")
-            return
-
-        # Luodaan keskusteluketju täyttäjälle
-        thread = create_thread(project_client)
-        if not thread:
-            print("Keskusteluketjun luominen täyttäjälle epäonnistui. Lopetetaan.")
-            return
-
-        # Lähetetään valitun linkin sisältö täyttäjälle
-        message = create_message(
-            project_client, thread.id, "user", selected_page_content +
-            "\n\n Käytä ohjeen rakennetta ja palauta kaikki kohdat täytettyinä keksityillä esimerkeillä. Tee tekstikenttiin keskipitkiä kuvauksia."
-        )
-        if not message:
-            print("Viestin lähettäminen täyttäjälle epäonnistui. Lopetetaan.")
-            return
-
-        # Prosessoidaan täyttäjän suoritus
-        run = process_run(project_client, thread.id, form_filler_agent.id)
-        if not run:
-            print("Täyttäjän suorituksen prosessointi epäonnistui. Lopetetaan.")
-            return
-
-        # Haetaan ja tallennetaan täyttäjän vastaus
-        messages = list_messages(project_client, thread.id)
-        if not messages:
-            print("Viestien haku täyttäjältä epäonnistui. Lopetetaan.")
-            return
-        filled_form = extract_assistant_reply(messages)
-        if not filled_form:
-            print("Ei vastausta täyttäjältä. Lopetetaan.")
-            return
-
-        # filled_form = filled_form.replace("```markdown", "").replace("```", "")
-        # write_to_file(filled_form, "täytetty_hakemus.md")
-
-        write_to_file(filled_form, "täytetty_hakemus.json")
-
-        # Siivotaan agentit
-        project_client.agents.delete_agent(parser_agent.id)
-        project_client.agents.delete_agent(selector_agent.id)
-        project_client.agents.delete_agent(form_filler_agent.id)
-        print("Agentit poistettu onnistuneesti.")
+        for topic in topics:
+            process_topic(project_client, base_url,
+                          url_postfix, topic, model_name)
 
     except Exception as e:
-        print(f"Tapahtui virhe: {e}")
+        print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
