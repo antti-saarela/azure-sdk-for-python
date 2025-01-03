@@ -163,3 +163,4 @@ TempTypeSpecFiles/
 **/.project
 **/.pydevproject
 **/.settings
+**/output/*

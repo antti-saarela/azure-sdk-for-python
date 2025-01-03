@@ -1,9 +1,8 @@
 # flake8: noqa: E501
 
-import re
 import os
 import json
-import time
+import re
 import requests
 from azure.ai.projects import AIProjectClient
 from azure.ai.projects.models import MessageTextContent, MessageTextDetails, ThreadMessage
@@ -106,10 +105,7 @@ def list_messages(project_client, thread_id):
 
 
 def extract_assistant_reply(messages):
-    """  
-    Extracts the assistant's reply from the messages.  
-    Always returns the 'text.value' field if it exists.  
-    """
+    """Extracts the assistant's reply from the messages."""
     try:
         for message in messages.data:
             if isinstance(message, ThreadMessage) and message.role == "assistant":
@@ -118,12 +114,12 @@ def extract_assistant_reply(messages):
                         first_content = message.content[0]
                         if (
                             isinstance(first_content, MessageTextContent) and
-                            first_content["type"] == "text" and
+                            first_content.type == "text" and
                             hasattr(first_content, "text") and
-                            isinstance(first_content["text"], MessageTextDetails) and
-                            hasattr(first_content["text"], "value")
+                            isinstance(first_content.text, MessageTextDetails) and
+                            hasattr(first_content.text, "value")
                         ):
-                            return str(first_content["text"].value)
+                            return str(first_content.text.value)
         print("No 'text.value' found in assistant's reply.")
         return None
     except Exception as e:
@@ -132,14 +128,7 @@ def extract_assistant_reply(messages):
 
 
 def parse_relative_path_with_regex(message_content):
-    """  
-    Parses the relative path from the agent's reply using regex.  
-    Handles cases where the link is:  
-    - A standalone relative path  
-    - Part of a key-value pair (e.g., "link" or "linkki")  
-    - With or without quotes  
-    - Removes trailing single quotes if present  
-    """
+    """Parses the relative path from the agent's reply using regex."""
     try:
         match = re.search(
             r'(?:link)?:?\s*["\']?(\/document-definitions\/[^\s"\'\\]+)', message_content)
@@ -253,7 +242,6 @@ def process_topic(project_client, base_url, url_postfix, topic, model_name):
         if not relative_path:
             print("No relative path to instructions. Skipping topic.")
             return
-
         print(f"relative_path {relative_path}")
 
         # Convert relative link to absolute
@@ -269,7 +257,7 @@ def process_topic(project_client, base_url, url_postfix, topic, model_name):
             print("Failed to fetch content of selected link. Skipping topic.")
             return
         write_to_file(selected_page_content,
-                      f"{topic}_instructions_content.html")
+                      f"{topic}_instructions_content.json")
 
         # Create form filler agent
         form_filler_agent = create_agent(
@@ -293,7 +281,7 @@ def process_topic(project_client, base_url, url_postfix, topic, model_name):
         # Send selected link content to form filler
         message = create_message(
             project_client, thread.id, "user", selected_page_content +
-            "\n\n Use the structure of the instructions and return all sections filled with invented examples. Make medium-length descriptions in text fields."
+            "\n\n Use the structure of the instructions and return all sections filled with invented examples. Make quite lengthy descriptions with vivid but realistic content in text fields."
         )
         if not message:
             print("Failed to send message to form filler. Skipping topic.")
@@ -314,6 +302,7 @@ def process_topic(project_client, base_url, url_postfix, topic, model_name):
         if not filled_form:
             print("No response from form filler. Skipping topic.")
             return
+        filled_form = filled_form.replace("```json", "").replace("```", "")
         write_to_file(filled_form, f"{topic}_filled_form.json")
 
         # Clean up agents
@@ -338,11 +327,9 @@ def main():
         model_name = os.environ["AAA_MODEL_DEPLOYMENT_NAME"]
         topics = ["ennakovia ilmoitus lastensuojelusta",
                   "Adoptioneuvonnan lausunto", "ilmotus kuntouttava työtoiminta"]
-
         for topic in topics:
             process_topic(project_client, base_url,
                           url_postfix, topic, model_name)
-
     except Exception as e:
         print(f"An error occurred: {e}")
 
