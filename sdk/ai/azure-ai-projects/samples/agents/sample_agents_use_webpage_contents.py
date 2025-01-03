@@ -11,7 +11,7 @@ from azure.identity import DefaultAzureCredential
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.WARNING,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 
@@ -53,7 +53,6 @@ def create_agent(project_client, model_name, agent_name, instructions):
             name=agent_name,
             instructions=instructions,
         )
-        logging.info(f"Agent created: {agent.id}")
         return agent
     except Exception as e:
         logging.error(f"Error creating agent: {e}")
@@ -151,71 +150,66 @@ def parse_relative_path_with_regex(message_content):
         return None
 
 
-def process_topic(project_client, base_url, url_postfix, topic, model_name, assistant_reply_yaml, previous_filled_form):
+def process_topic(project_client, base_url, url_postfix, topic, topic_links_yaml, selector_agent, form_filler_agent, form_filler_thread):
+    """Processes a topic by creating agents, threads, and handling messages."""
     try:
-        # Create selector agent
-        selector_agent = create_agent(
-            project_client,
-            model_name=model_name,
-            agent_name="link-selector",
-            instructions="Valitse oikea linkki annettujen ohjeiden perusteella."
-        )
-        if not selector_agent:
+        # Create new thread for the selector agent
+        selector_thread = create_thread(project_client)
+        if not selector_thread:
             logging.error(
-                "Failed to create link selector agent. Skipping topic.")
-            return
-
-        # Create thread for selector
-        thread = create_thread(project_client)
-        if not thread:
-            logging.error(
-                "Failed to create thread for selector. Skipping topic.")
+                "Failed to create thread for selector agent. Skipping topic.")
             return
 
         # Send parser response to selector
         message_content = {
-            "prompt": f"Valitse ja palauta vain suhteellinen linkki, joka parhaiten vastaa ohjeita lomakkeen täyttämiseksi {topic}. Palauta vain linkki, ei mitään muuta.",
-            "links": assistant_reply_yaml
+            "prompt": f"Valitse ja palauta vain suhteellinen linkki, joka parhaiten vastaa ohjeita lomakkeen täyttämiseksi, kun aiheena on {topic}. Palauta vain linkki, ei mitään muuta.",
+            "links": topic_links_yaml['links']
         }
         message = create_message(
-            project_client, thread.id, "user", json.dumps(message_content))
+            project_client, selector_thread.id, "user", json.dumps(message_content))
         if not message:
             logging.error(
                 "Failed to send message to selector. Skipping topic.")
+            project_client.agents.delete_thread(selector_thread.id)
             return
 
         # Process selector run
-        run = process_run(project_client, thread.id, selector_agent.id)
+        run = process_run(project_client, selector_thread.id,
+                          selector_agent.id)
         if not run:
             logging.error("Failed to process selector run. Skipping topic.")
+            project_client.agents.delete_thread(selector_thread.id)
             return
 
         # Fetch and save selector response
-        messages = list_messages(project_client, thread.id)
+        messages = list_messages(project_client, selector_thread.id)
         if not messages:
             logging.error(
                 "Failed to fetch messages from selector. Skipping topic.")
+            project_client.agents.delete_thread(selector_thread.id)
             return
-
         selected_link = extract_assistant_reply(messages)
         if not selected_link:
             logging.error("No response from selector. Skipping topic.")
+            project_client.agents.delete_thread(selector_thread.id)
             return
-
         write_to_file(selected_link, f"{topic}_selected_link.txt")
         relative_path = parse_relative_path_with_regex(selected_link)
         if not relative_path:
             logging.error("No relative path to instructions. Skipping topic.")
+            project_client.agents.delete_thread(selector_thread.id)
             return
 
         logging.info(f"relative_path {relative_path}")
+
+        # Delete the selector thread as it's no longer needed
+        project_client.agents.delete_thread(selector_thread.id)
 
         # Convert relative link to absolute
         if not relative_path.startswith("http"):
             selected_link = f"{base_url}{relative_path}{url_postfix}"
         else:
             selected_link = relative_path
-
         write_to_file(selected_link, f"{topic}_combined_link.txt")
 
         # Fetch selected link content
@@ -224,40 +218,14 @@ def process_topic(project_client, base_url, url_postfix, topic, model_name, assi
             logging.error(
                 "Failed to fetch content of selected link. Skipping topic.")
             return
-
         write_to_file(selected_page_content,
                       f"{topic}_instructions_content.json")
 
-        # Create form filler agent
-        form_filler_agent = create_agent(
-            project_client,
-            model_name=model_name,
-            agent_name="form-filler",
-            instructions=("Käytä annettua HTML-sisältöä täyttöohjeina ja täytä uusi lomake keksityillä tiedoilla."
-                          "Palauta vain täytetty lomake. Täytä kaikki ohjeissa mainitut osiot, myös ne, joita ei ole merkitty pakollisiksi."
-                          "Täytä kaikki hierarkkiset tasot. Keksi selityksiä ja tekstejä vapaatekstikenttiin tarvittaessa. Palauta täytetty lomake JSON-muodossa."
-                          f"Käytä aiemmin täytettyä lomaketta taustatietona erityisesti nimien ja yhteystietojen osalta, jos sellainen annetaan sinulle.")
-        )
-        if not form_filler_agent:
-            logging.error(
-                "Failed to create form filler agent. Skipping topic.")
-            return
-
-        # Create thread for form filler
-        thread = create_thread(project_client)
-        if not thread:
-            logging.error(
-                "Failed to create thread for form filler. Skipping topic.")
-            return
-
-        # Send selected link content to form filler
+        # Send selected link content to form filler with updated instructions
         user_input = selected_page_content + \
-            "\n\n Käytä ohjeiden rakennetta ja palauta kaikki osiot täytettyinä keksityillä esimerkeillä. Tee melko pitkiä kuvauksia eloisalla mutta realistisella sisällöllä tekstikentissä."
-        if len(previous_filled_form) > 5:
-            user_input = user_input + \
-                "\nKäytä mahdollisuuksien mukaan tietoja alla olevista ennakkotiedoista:\n\n {previous_filled_form}"
+            "\n\n Käytä ohjeiden rakennetta ja palauta kaikki osiot täytettyinä keksityillä esimerkeillä. Varmista, että tiedot ovat johdonmukaisia tämän keskustelun aiempien lomakkeiden kanssa, säilyttäen nimet, yhteystiedot ja muut tiedot lomakkeiden välillä aiheen sisällä. Tee melko pitkiä kuvauksia eloisalla mutta realistisella sisällöllä tekstikentissä."
         message = create_message(
-            project_client, thread.id, "user", user_input
+            project_client, form_filler_thread.id, "user", user_input
         )
         if not message:
             logging.error(
@@ -265,30 +233,25 @@ def process_topic(project_client, base_url, url_postfix, topic, model_name, assi
             return
 
         # Process form filler run
-        run = process_run(project_client, thread.id, form_filler_agent.id)
+        run = process_run(
+            project_client, form_filler_thread.id, form_filler_agent.id)
         if not run:
             logging.error("Failed to process form filler run. Skipping topic.")
             return
 
         # Fetch and save form filler response
-        messages = list_messages(project_client, thread.id)
+        messages = list_messages(project_client, form_filler_thread.id)
         if not messages:
             logging.error(
                 "Failed to fetch messages from form filler. Skipping topic.")
             return
-
         filled_form = extract_assistant_reply(messages)
         if not filled_form:
             logging.error("No response from form filler. Skipping topic.")
             return
-
         filled_form = filled_form.replace("```json", "").replace("```", "")
         write_to_file(filled_form, f"{topic}_filled_form.json")
 
-        # Clean up agents
-        project_client.agents.delete_agent(selector_agent.id)
-        project_client.agents.delete_agent(form_filler_agent.id)
-        logging.info("Agents successfully deleted.")
         return filled_form
     except Exception as e:
         logging.error(f"Error processing topic '{topic}': {e}")
@@ -301,7 +264,7 @@ def get_file_creation_time_from_yaml(filepath):
         with open(filepath, 'r', encoding='utf-8') as file:
             content = yaml.safe_load(file)
             if 'timestamp_created' in content:
-                return datetime.strptime(content['timestamp_created'], '%Y-%m-%d').date()
+                return content['timestamp_created']
             return None
     except Exception as e:
         logging.error(f"Error getting file creation time from YAML: {e}")
@@ -331,6 +294,7 @@ def read_yaml_file(filepath):
 
 
 def main():
+    """Main function to execute the process."""
     try:
         # Initialize AIProjectClient
         project_client = AIProjectClient.from_connection_string(
@@ -378,7 +342,11 @@ def main():
         filepath = os.path.join("output", "parser_response.yaml")
         if os.path.exists(filepath) and not is_file_older_than_a_week(filepath):
             logging.info("parser_response.yaml is fresh. Using existing file.")
-            assistant_reply_yaml = read_yaml_file(filepath)
+            topic_links_yaml = read_yaml_file(filepath)
+            if not topic_links_yaml or len(topic_links_yaml['links']) == 0:
+                logging.error(
+                    "Failed to read or empty parser_response.yaml. Exiting.")
+                return
         else:
             # Fetch web page content once
             url = f"{base_url}/document-definitions/list/search"
@@ -400,53 +368,107 @@ def main():
                 return
 
             # Create thread for parser
-            thread = create_thread(project_client)
-            if not thread:
+            parser_thread = create_thread(project_client)
+            if not parser_thread:
                 logging.error("Failed to create thread for parser. Exiting.")
                 return
 
             # Send HTML content to parser
             message = create_message(
-                project_client, thread.id, "user", html_content)
+                project_client, parser_thread.id, "user", html_content)
             if not message:
                 logging.error("Failed to send message to parser. Exiting.")
                 return
 
             # Process parser run
-            run = process_run(project_client, thread.id, parser_agent.id)
+            run = process_run(
+                project_client, parser_thread.id, parser_agent.id)
             if not run:
                 logging.error("Failed to process parser run. Exiting.")
                 return
 
             # Fetch and save parser response
-            messages = list_messages(project_client, thread.id)
+            messages = list_messages(project_client, parser_thread.id)
             if not messages:
                 logging.error("Failed to fetch messages from parser. Exiting.")
                 return
-
-            assistant_reply_yaml = extract_assistant_reply(messages)
-            if not assistant_reply_yaml:
-                logging.error("No response from parser. Exiting.")
+            topic_links_yaml = extract_assistant_reply(messages)
+            if not topic_links_yaml or not topic_links_yaml.strip():
+                logging.error(
+                    "No response from parser or response is empty. Exiting.")
                 return
-
-            assistant_reply_yaml = assistant_reply_yaml.replace(
+            topic_links_yaml = topic_links_yaml.replace(
                 "```yaml", "").replace("```", "")
             date = datetime.now().strftime('%Y-%m-%d')
-            write_to_file(assistant_reply_yaml,
-                          "parser_response.yaml", date)
+            write_to_file(topic_links_yaml, "parser_response.yaml", date)
 
-            # Clean up parser agent
+            # Clean up parser agent and thread
             project_client.agents.delete_agent(parser_agent.id)
-            logging.info("Parser agent successfully deleted.")
+            project_client.agents.delete_thread(parser_thread.id)
 
-        previous_filled_form = ""
+        selector_agent = None
+        form_filler_agent = None
+        form_filler_thread = None
+
         for topic in topics:
             if topic.startswith("#"):
-                # Reset previous_filled_form when a new topic group starts
-                previous_filled_form = ""
+                # Reset form filler agent and thread when a new topic group starts
+                if form_filler_agent:
+                    project_client.agents.delete_agent(form_filler_agent.id)
+                if form_filler_thread:
+                    project_client.agents.delete_thread(form_filler_thread.id)
+
+                # Create new form filler agent and thread
+                form_filler_agent = create_agent(
+                    project_client,
+                    model_name=model_name,
+                    agent_name="form-filler",
+                    instructions=(
+                        "Käytä annettua JSON-sisältöä täyttöohjeina ja täytä uusi lomake keksityillä tiedoilla."
+                        "Palauta vain täytetty lomake. Täytä kaikki ohjeissa mainitut osiot, myös ne, joita ei ole merkitty pakollisiksi."
+                        "Täytä kaikki hierarkkiset tasot. Keksi selityksiä ja tekstejä vapaatekstikenttiin tarvittaessa."
+                        "Varmista, että käytetyt tiedot ovat johdonmukaisia tämän keskustelun aiempien lomakkeiden kanssa, säilyttäen nimet, yhteystiedot ja muut tiedot lomakkeiden välillä aiheen sisällä."
+                        "Palauta täytetty lomake JSON-muodossa."
+                    )
+                )
+                if not form_filler_agent:
+                    logging.error(
+                        "Failed to create form filler agent. Exiting.")
+                    return
+
+                form_filler_thread = create_thread(project_client)
+                if not form_filler_thread:
+                    logging.error("Failed to create thread. Exiting.")
+                    return
+
+                # Create new selector agent for the topic group
+                if selector_agent:
+                    project_client.agents.delete_agent(selector_agent.id)
+
+                selector_agent = create_agent(
+                    project_client,
+                    model_name=model_name,
+                    agent_name="link-selector",
+                    instructions="Valitse oikea linkki annettujen ohjeiden perusteella."
+                )
+                if not selector_agent:
+                    logging.error(
+                        "Failed to create link selector agent. Exiting.")
+                    return
+
                 continue
-            previous_filled_form = process_topic(
-                project_client, base_url, url_postfix, topic, model_name, assistant_reply_yaml, previous_filled_form)
+
+            process_topic(
+                project_client, base_url, url_postfix, topic, topic_links_yaml, selector_agent, form_filler_agent, form_filler_thread)
+
+        # Clean up agents and threads after processing all topics
+        if selector_agent:
+            project_client.agents.delete_agent(selector_agent.id)
+        if form_filler_agent:
+            project_client.agents.delete_agent(form_filler_agent.id)
+        if form_filler_thread:
+            project_client.agents.delete_thread(form_filler_thread.id)
+
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 
