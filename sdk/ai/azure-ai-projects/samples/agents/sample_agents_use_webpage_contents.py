@@ -14,21 +14,32 @@ import logging
 logging.basicConfig(level=logging.WARNING,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
+OUTDIR = "sosmeta"  # sosmeta or termeta
+
 
 def write_to_file(data, filename, output_dir="output", sub_dir=None, date=None):
     """Writes data to a file, converting it to a string first."""
     try:
+        # Shorten the filename to a maximum of 32 characters
+        max_filename_length = 32
+        if len(filename) > max_filename_length:
+            name, postfix = filename.rsplit('.', 1)
+            filename = name[:max_filename_length] + '.' + postfix
+
         if sub_dir:
             dir_path = os.path.join(output_dir, sub_dir)
         else:
             dir_path = output_dir
+
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
+
         filepath = os.path.join(dir_path, filename)
         with open(filepath, 'w', encoding='utf-8') as file:
             if date:
                 file.write(f"timestamp_created: {date}\n")
             file.write(str(data))
+
         logging.info(f"Data successfully written to {filepath}")
     except Exception as e:
         logging.error(f"Error writing to file {filepath}: {e}")
@@ -48,13 +59,14 @@ def fetch_web_page_content(url):
         return None
 
 
-def create_agent(project_client, model_name, agent_name, instructions):
+def create_agent(project_client, model_name, agent_name, instructions, temperature):
     """Creates an agent with the given parameters."""
     try:
         agent = project_client.agents.create_agent(
             model=model_name,
             name=agent_name,
             instructions=instructions,
+            temperature=temperature
         )
         return agent
     except Exception as e:
@@ -153,7 +165,7 @@ def parse_relative_path_with_regex(message_content):
         return None
 
 
-def process_topic(project_client, base_url, url_postfix, output_base_dir, topic, topic_links_yaml, selector_agent, form_filler_agent, form_filler_thread):
+def process_topic(project_client, base_url, url_postfix, output_base_dir, topic, topic_links_yaml, selector_agent, form_filler_agent, form_filler_thread, topic_dir="filled_forms"):
     """Processes a topic by creating agents, threads, and handling messages."""
     try:
         # Create new thread for the selector agent
@@ -228,7 +240,11 @@ def process_topic(project_client, base_url, url_postfix, output_base_dir, topic,
 
         # Send selected link content to form filler with updated instructions
         user_input = selected_page_content + \
-            "\n\n Käytä ohjeiden rakennetta ja palauta kaikki osiot täytettyinä keksityillä esimerkeillä. Varmista, että tiedot ovat johdonmukaisia tämän keskustelun aiempien lomakkeiden kanssa, säilyttäen nimet, yhteystiedot ja muut tiedot lomakkeiden välillä aiheen sisällä. Tee melko pitkiä kuvauksia eloisalla mutta realistisella sisällöllä tekstikentissä."
+            ("\n\nKäytä ohjeiden rakennetta ja palauta kaikki osiot täytettyinä keksityillä esimerkeillä. "
+             "Varmista, että tiedot ovat johdonmukaisia tämän keskustelun aiempien lomakkeiden kanssa, "
+             "säilyttäen nimet, yhteystiedot ja muut tiedot lomakkeiden välillä aiheen sisällä. "
+             "Käytä af ja von alkuisia sukunimiä hvin usein kun keksit uusia sukunimiä. "
+             "Tee pitkiä kuvauksia eloisalla mutta realistisella sisällöllä tekstikentissä.")
         message = create_message(
             project_client, form_filler_thread.id, "user", user_input
         )
@@ -256,8 +272,7 @@ def process_topic(project_client, base_url, url_postfix, output_base_dir, topic,
             return
         filled_form = filled_form.replace("```json", "").replace("```", "")
         write_to_file(filled_form, f"{topic}_filled_form.json",
-                      output_dir=output_base_dir, sub_dir="filled_forms")
-
+                      output_dir=output_base_dir, sub_dir=topic_dir)
         return filled_form
     except Exception as e:
         logging.error(f"Error processing topic '{topic}': {e}")
@@ -283,10 +298,10 @@ def is_file_older_than_a_week(filepath):
         file_creation_date = get_file_creation_time_from_yaml(filepath)
         if file_creation_date:
             return datetime.now().date() - file_creation_date > timedelta(weeks=1)
-        return False
+        return True
     except Exception as e:
         logging.error(f"Error checking file age: {e}")
-        return False
+        return True
 
 
 def read_yaml_file(filepath):
@@ -307,49 +322,41 @@ def main():
             credential=DefaultAzureCredential(),
             conn_str=os.environ["PROJECT_CONNECTION_STRING"],
         )
-        base_url = "https://sosmeta.thl.fi"
+        base = OUTDIR
+        base_url = f"https://{base}.thl.fi"
         url_postfix = "/schema"
         model_name = os.environ["AAA_MODEL_DEPLOYMENT_NAME"]
-        topics = [
-            "# Adoption process",
-            "Adoptionhakijoiden taustaselvitys",
-            "Adoptioneuvonnan suunnitelma",
-            "Adoptoitavan lapsen taustatiedot",
-            "Adoptioneuvonnan lausunto",
-            "Ilmoitus adoptionhakijoiden olosuhteiden muutoksesta",
-            "# Child protection and welfare",
-            "Ennakollinen lastensuojeluilmoitus",
-            "Ennakollisen lastensuojeluilmoituksen arvio",
-            "Huostaanottohakemus hallinto-oikeudelle",
-            "Hoito- ja kasvatussuunnitelma",
-            "Ilmoitus hyvinvointialueen alueelle sijoitetusta lapsesta",
-            "# Employment and social services",
-            "Aktivointisuunnitelma",
-            "Ilmoitus kuntouttavasta työtoiminnasta",
-            "Asia-asiakirja",
-            "Asiakkuusasiakirja",
-            "Asiakkaan yksilöllinen varautumissuunnitelma",
-            "# Family and parental matters",
-            "Avioliiton aikana syntyneen tai raskausaikana tunnustetun lapsen vanhempien neuvotteluasiakirja vanhemmuuden selvittämiseksi",
-            "Hyväksymisasiakirja vanhemmuusasiassa",
-            "Ilmoitus lapsen elatusavun lakimääräisestä muutoksesta",
-            "Ilmoitus lapsen huoltajan tarpeesta",
-            "# Special care and health services",
-            "Hakemus erityishuoltoon",
-            "Hakemus hallinto-oikeudelle lapsen tutkimiseksi",
-            "Hakemus päihde- ja riippuvuustyön erityiseen palveluun",
-            "Ilmoitus aluehallintovirastolle asiakkaan sitomisesta",
-            "# Safety and risk assessment",
-            "Häirinnän ja vainon riskiarvio",
-            "Ilmoitus sosiaalihuollon tarpeesta",
-        ]
+
+        topics = []
+        if base == "sosmeta":
+            # Read topics from sosmeta_topics.yml
+            topics_yaml = read_yaml_file("sosmeta_topics.yml")
+            if topics_yaml:
+                for key, value in topics_yaml.items():
+                    topics.append(f"# {key}")
+                    topics.extend(value)
+        elif base == "termeta":
+            topics = ["Ajanvarausasiakirja",
+                      "Hoidon tarpeen arvioinnin merkintä",
+                      "Lääkemääräyksen lukitus ja varaukset",
+                      "Lääkemääräyksen uusimispyyntö",
+                      "Lääkemääräys",
+                      "Lääkkeen lopettamismerkintä",
+                      "Lääkkeen toimitus",
+                      "Merkintä toimintakyvystä",
+                      "Toimintakykyarvio",
+                      "Tupakka- ja nikotiinituotteiden käytön merkintä"
+                      ]
+        else:
+            logging.error("Invalid base address. Exiting.")
+            return
 
         # Prepare output directory with timestamp
         timestamp_str = datetime.now().strftime('%Y-%m-%d_%H-%M')
-        output_base_dir = os.path.join("output", timestamp_str)
+        output_base_dir = os.path.join(OUTDIR, timestamp_str)
 
         # Check if parser_response.yaml exists and is older than a week
-        filepath = os.path.join("output", "parser_response.yaml")
+        filepath = os.path.join(OUTDIR, "parser_response.yaml")
         if os.path.exists(filepath) and not is_file_older_than_a_week(filepath):
             logging.info("parser_response.yaml is fresh. Using existing file.")
             topic_links_yaml = read_yaml_file(filepath)
@@ -359,6 +366,8 @@ def main():
                 return
         else:
             # Fetch web page content once
+            if base == "termeta":
+                base_url = base_url + "/termeta"
             url = f"{base_url}/document-definitions/list/search"
             html_content = fetch_web_page_content(url)
             if not html_content:
@@ -370,7 +379,9 @@ def main():
                 project_client,
                 model_name=model_name,
                 agent_name="content-parser",
-                instructions="Jäsennä annettu HTML-sisältö ja palauta linkit, otsikot ja kuvaukset, jotka liittyvät asiakirjojen täyttämiseen. Palauta vain linkit, tila, otsikot ja kuvaukset hyvin jäsennellyssä koneellisesti luettavassa muodossa, kuten YAML."
+                instructions="Jäsennä annettu HTML-sisältö ja palaua linkit, otsikot ja kuvaukset, jotka liittyvät asiakirjojen täyttämiseen."
+                + "Palauta vain linkit, tila, otsikot ja kuvaukset hyvin jäsennellyssä koneellisesti luettavassa YAML -muodossa. Laita linkit osion 'links' alle.",
+                temperature=0.0
             )
             if not parser_agent:
                 logging.error(
@@ -410,7 +421,13 @@ def main():
             topic_links_yaml = topic_links_yaml.replace(
                 "```yaml", "").replace("```", "")
             date = datetime.now().strftime('%Y-%m-%d')
-            write_to_file(topic_links_yaml, "parser_response.yaml", date)
+            write_to_file(topic_links_yaml,
+                          "parser_response.yaml", OUTDIR, date=date)
+            topic_links_yaml = read_yaml_file(filepath)
+            if not topic_links_yaml or len(topic_links_yaml['links']) == 0:
+                logging.error(
+                    "Failed to read or empty parser_response.yaml. Exiting.")
+                return
 
             # Clean up parser agent and thread
             project_client.agents.delete_agent(parser_agent.id)
@@ -420,8 +437,13 @@ def main():
         form_filler_agent = None
         form_filler_thread = None
 
+        is_first_topic = True
+
+        topic_dir = "generic"
+
         for topic in topics:
-            if topic.startswith("#"):
+            if topic.startswith("#") or is_first_topic:
+                is_first_topic = False
                 # Reset form filler agent and thread when a new topic group starts
                 if form_filler_agent:
                     project_client.agents.delete_agent(form_filler_agent.id)
@@ -434,21 +456,23 @@ def main():
                     model_name=model_name,
                     agent_name="form-filler",
                     instructions=(
-                        "Käytä annettua JSON-sisältöä täyttöohjeina ja täytä uusi lomake keksityillä tiedoilla."
-                        "Palauta vain täytetty lomake. Täytä kaikki ohjeissa mainitut osiot, myös ne, joita ei ole merkitty pakollisiksi."
-                        "Täytä kaikki hierarkkiset tasot. Keksi selityksiä ja tekstejä vapaatekstikenttiin tarvittaessa."
-                        "Varmista, että käytetyt tiedot ovat johdonmukaisia tämän keskustelun aiempien lomakkeiden kanssa, säilyttäen nimet, yhteystiedot ja muut tiedot lomakkeiden välillä aiheen sisällä."
-                        "Jos ja kun keksit uusia nimiä, vältä kaikkein yleisimpiä sukunimiä ja etunimiä. Ole huolellinen käyttäessäsi nimiä keskusteluhistoriasta."
-                        "Ole tarkka syntymäaikojen ja sosiaaliturvatunnuksien luomsen kanssa, jotta ne olisivat yhdenmukaisia."
-                        "Käytä huolellista ja hyvää suomenkieltä."
-                        "Palauta täytetty lomake JSON-muodossa."
-                    )
+                        "Käytä annettua JSON-sisältöä täyttöohjeina ja täytä uusi asiakirja keksityillä tiedoilla."
+                        "Palauta vain täytetty asiakirja. Täytä kaikki ohjeissa mainitut osiot, myös ne, joita ei ole merkitty pakollisiksi."
+                        "Täytä kaikki hierarkkiset tasot. Keksi selityksiä ja tekstejä kaikkiin vapaatekstikenttiin."
+                        "Varmista, että käytetyt tiedot ovat johdonmukaisia tämän keskustelun aiempien asiakirjojen kanssa, säilyttäen nimet, yhteystiedot ja muut tiedot asiakirjojen välillä aiheen sisällä."
+                        "Jos ja kun keksit uusia nimiä, vältä hyvin yleisiä sukunimiä ja etunimiä. Käytä harvinaisia sukunimiä ja etunimiä, kun keksit nimiä.\n"
+                        "TÄRKEÄÄ: Ole huolellinen käyttäessäsi asiakkaiden ja muiden toimijoiden nimiä ja muita tietoja keskusteluhistoriasta.\n"
+                        "Ole tarkka syntymäaikojen ja sosiaaliturvatunnuksien luomisen kanssa, jotta ne olisivat yhdenmukaisia ja linjassa aiheen kanssa."
+                        "Lakiselostuksen osalta tee viittaus Suomen lakiin sosiaalihuollosta soveltuvin osin."
+                        "Käytä huolellista ja hyvää suomenkieltä.\n"
+                        "Palauta täytetty asiakirja JSON-muodossa.\n"
+                    ),
+                    temperature=0.3
                 )
                 if not form_filler_agent:
                     logging.error(
                         "Failed to create form filler agent. Exiting.")
                     return
-
                 form_filler_thread = create_thread(project_client)
                 if not form_filler_thread:
                     logging.error("Failed to create thread. Exiting.")
@@ -457,22 +481,23 @@ def main():
                 # Create new selector agent for the topic group
                 if selector_agent:
                     project_client.agents.delete_agent(selector_agent.id)
-
                 selector_agent = create_agent(
                     project_client,
                     model_name=model_name,
                     agent_name="link-selector",
-                    instructions="Valitse oikea linkki annettujen ohjeiden perusteella."
+                    instructions="Valitse oikea linkki annettujen ohjeiden perusteella.",
+                    temperature=0.0
                 )
                 if not selector_agent:
                     logging.error(
                         "Failed to create link selector agent. Exiting.")
                     return
 
+                topic_dir = topic.replace('#', '').strip()
                 continue
 
             process_topic(
-                project_client, base_url, url_postfix, output_base_dir, topic, topic_links_yaml, selector_agent, form_filler_agent, form_filler_thread)
+                project_client, base_url, url_postfix, output_base_dir, topic, topic_links_yaml, selector_agent, form_filler_agent, form_filler_thread, topic_dir)
 
         # Clean up agents and threads after processing all topics
         if selector_agent:
@@ -481,7 +506,6 @@ def main():
             project_client.agents.delete_agent(form_filler_agent.id)
         if form_filler_thread:
             project_client.agents.delete_thread(form_filler_thread.id)
-
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 
